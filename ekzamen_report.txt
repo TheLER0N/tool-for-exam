@@ -1,0 +1,1409 @@
+﻿================================================================
+  PROJECT REPORT : ekzamen
+  GENERATED      : 06.09.2026 23:53:26
+  PATH           : C:\Users\Пользователь\Desktop\ekzamen
+================================================================
+
+==================== STRUCTURE ====================
+
+C:\Users\Пользователь\Desktop\ekzamen
++---check.bat
++---DemoForm.cs
++---DemoFormUi.cs
++---Ekzamen.csproj
++---Program.cs
++---push-to-github.bat
+\---SafeFormDuplicator.cs
+
+==================== SOURCE FILES ====================
+
+------------------------------------------------
+FILE: check.bat
+SIZE: 6125 bytes
+------------------------------------------------
+@echo off
+chcp 65001 >nul 2>&1
+setlocal
+cd /d "%~dp0"
+set "STARTPATH=%~dp0"
+echo.
+echo ================================================================
+echo   NEW ERA · PROJECT REPORT
+echo ================================================================
+echo.
+echo   Батник открыт из : %STARTPATH%
+echo   Сейчас откроется окно выбора папки для отчёта.
+echo.
+:: ── Выбор папки (диалог стартует из папки батника) ──────────
+set "TARGET="
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms;$d=New-Object System.Windows.Forms.FolderBrowserDialog;$d.Description='Выбери папку для отчёта';$d.SelectedPath=$env:STARTPATH;$d.ShowNewFolderButton=$false;if($d.ShowDialog()-eq 'OK'){$d.SelectedPath}"`) do set "TARGET=%%P"
+:: ── Если диалог закрыли — ввод пути вручную ─────────────────
+if not defined TARGET (
+echo   [i] Окно закрыто. Укажи путь вручную.
+echo       Папка батника: %STARTPATH%
+set /p "TARGET=  Путь к папке для отчёта ^(Enter = папка батника^)> "
+)
+if not defined TARGET set "TARGET=%STARTPATH%"
+:: убрать завершающий обратный слэш
+if "%TARGET:~-1%"=="\" set "TARGET=%TARGET:~0,-1%"
+set "ROOT=%TARGET%"
+if not exist "%ROOT%\" (
+echo   [XX] Папка не найдена: %ROOT%
+pause
+exit /b 1
+)
+for %%I in ("%ROOT%") do set "NAME=%%~nxI"
+set "OUT=%ROOT%\%NAME%_report.txt"
+echo.
+echo ================================================================
+echo   FOLDER : %NAME%
+echo   PATH   : %ROOT%
+echo ================================================================
+echo.
+echo   [i] Формирую отчёт: %NAME%_report.txt
+echo.
+:: ─── Пути для PowerShell ────────────────────────────────────
+set "NR_ROOT=%ROOT%"
+set "NR_OUT=%OUT%"
+set "NR_NAME=%NAME%"
+:: ─── Отчёт (UTF-8 с BOM) ────────────────────────────────────
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$r=$env:NR_ROOT;$o=$env:NR_OUT;$nm=$env:NR_NAME;[Console]::OutputEncoding=[Text.Encoding]::UTF8;$m='.cs','.bat','.cmd','.ps1','.json','.xml','.xaml','.csproj','.sln','.py','.md','.sh','.txt','.gitignore','.js','.ts','.html','.css','.yml','.yaml','.toml','.ini','.env','.cfg';$skip=@('bin','obj','.git','.vs','.vscode','.idea');$skipRe='\\(bin|obj|\.git|\.vscode|\.vs|\.idea)\\';function T($p,$pf){$e=Get-ChildItem -LiteralPath $p|Where-Object {($skip -notcontains $_.Name) -and ($_.FullName -ne $o)}|Sort-Object Name;$cnt=@($e).Count;for($i=0;$i-lt$cnt;$i++){$it=$e[$i];$l=$i-eq($cnt-1);if($l){$cn='\---'}else{$cn='+---'};$pf+$cn+$it.Name;if($it.PSIsContainer){if($l){$nx=$pf+'    '}else{$nx=$pf+'|   '};T $it.FullName $nx}}};$s=[Text.StringBuilder]::new();$L='='*64;[void]$s.AppendLine($L);[void]$s.AppendLine('  PROJECT REPORT : '+$nm);[void]$s.AppendLine('  GENERATED      : '+(Get-Date -Format 'dd.MM.yyyy HH:mm:ss'));[void]$s.AppendLine('  PATH           : '+$r);[void]$s.AppendLine($L);[void]$s.AppendLine('');[void]$s.AppendLine('==================== STRUCTURE ====================');[void]$s.AppendLine('');[void]$s.AppendLine($r);foreach($ln in @(T $r '')){[void]$s.AppendLine($ln)};[void]$s.AppendLine('');[void]$s.AppendLine('==================== SOURCE FILES ====================');$fc=0;$fs=Get-ChildItem -LiteralPath $r -Recurse -File|Where-Object {($m -contains $_.Extension.ToLower()) -and ($_.FullName -ne $o) -and ($_.FullName -notmatch $skipRe)};foreach($f in $fs){$fc++;$rel=$f.FullName.Substring($r.Length+1);[void]$s.AppendLine('');[void]$s.AppendLine('-'*48);[void]$s.AppendLine('FILE: '+$rel);[void]$s.AppendLine('SIZE: '+$f.Length+' bytes');[void]$s.AppendLine('-'*48);try{$txt=[IO.File]::ReadAllText($f.FullName,[Text.Encoding]::UTF8);[void]$s.AppendLine($txt.TrimEnd())}catch{[void]$s.AppendLine('  [!!] Ошибка чтения: '+$_.Exception.Message)};[void]$s.AppendLine('');Write-Host ('  [OK] '+$rel)};[void]$s.AppendLine('==================== SUMMARY ====================');[void]$s.AppendLine('  Source files : '+$fc);[void]$s.AppendLine('  Report file  : '+$nm+'_report.txt');[void]$s.AppendLine($L);[IO.File]::WriteAllText($o,$s.ToString(),[Text.UTF8Encoding]::new($true));Write-Host '';Write-Host ('  [OK] Обработано файлов: '+$fc);Write-Host ('  [OK] Отчёт сохранён   : '+$o)"
+:: ─── Поиск Notepad++ ────────────────────────────────────────
+set "NPP="
+where notepad++ >nul 2>&1 && set "NPP=notepad++"
+if not defined NPP for /f "tokens=2*" %%A in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\notepad++.exe" /ve 2^>nul') do set "NPP=%%B"
+if not defined NPP for /f "tokens=2*" %%A in ('reg query "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\notepad++.exe" /ve 2^>nul') do set "NPP=%%B"
+if not defined NPP if exist "%ProgramFiles%\Notepad++\notepad++.exe" set "NPP=%ProgramFiles%\Notepad++\notepad++.exe"
+set "PF86=%ProgramFiles(x86)%"
+if not defined NPP if exist "%PF86%\Notepad++\notepad++.exe" set "NPP=%PF86%\Notepad++\notepad++.exe"
+if not defined NPP if exist "%LOCALAPPDATA%\Programs\Notepad++\notepad++.exe" set "NPP=%LOCALAPPDATA%\Programs\Notepad++\notepad++.exe"
+:: ─── Открыть отчёт ──────────────────────────────────────────
+echo.
+set /p "OPEN=  Открыть отчёт? [y/N] "
+if /i "%OPEN%"=="y" (
+if defined NPP (
+echo   [i] Открываю в Notepad++ ...
+start "" "%NPP%" "%OUT%"
+) else (
+echo   [i] Notepad++ не найден — открываю в Блокноте.
+start "" notepad "%OUT%"
+)
+)
+endlocal
+pause
+
+
+------------------------------------------------
+FILE: DemoForm.cs
+SIZE: 13849 bytes
+------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using SafeWinForms;
+
+namespace Ekzamen
+{
+    public partial class DemoForm : Form
+    {
+        public static readonly Color BgMain = Color.FromArgb(30, 30, 30);
+        public static readonly Color BgSide = Color.FromArgb(37, 37, 38);
+        public static readonly Color BgBar = Color.FromArgb(36, 36, 36);
+        public static readonly Color BgTitle = Color.FromArgb(25, 25, 25);
+        public static readonly Color Border = Color.FromArgb(63, 63, 70);
+        public static readonly Color TextMain = Color.FromArgb(232, 232, 232);
+        public static readonly Color TextSoft = Color.FromArgb(157, 157, 157);
+        public static readonly Color Accent = Color.FromArgb(224, 166, 43);
+        public static readonly Color Primary = Color.FromArgb(61, 110, 168);
+        public static readonly Color OkGreen = Color.FromArgb(78, 201, 76);
+
+        private enum TabMode { All, Open, Fav }
+
+        private readonly List<Type> _formTypes = new List<Type>();
+        private readonly HashSet<string> _favorites = new HashSet<string>();
+        private TabMode _tab = TabMode.All;
+        private bool _projectConfirmed = false;
+
+        private Panel _titleBar;
+        private Label _titleLabel;
+        private TextBox _search;
+        private ListBox _formsList;
+        private Label _countLabel;
+        private Button _tabAll;
+        private Button _tabOpen;
+        private Button _tabFav;
+        private TextBox _folderText;
+        private Button _btnBrowse;
+        private Button _btnOpen;
+        private Button _btnDupSelected;
+        private Button _btnDupSelf;
+        private Label _propClass;
+        private Label _propFile;
+        private Label _propLines;
+        private Label _propMod;
+        private RichTextBox _log;
+        private Label _stOpen;
+        private Label _stFound;
+        private Label _stClock;
+        private Timer _timer;
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, int lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SendMessageW")]
+        private static extern IntPtr SendMessageStr(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HTCAPTION = 2;
+        private const int EM_SETCUEBANNER = 0x1501;
+
+        public DemoForm()
+        {
+            BuildUi();
+            LoadFavorites();
+            Log("Панель запущена, тема: тёмная");
+            ScanForms();
+            Log("Автопоиск: найдено " + _formTypes.Count.ToString() + " форм в проекте");
+            _timer = new Timer();
+            _timer.Interval = 1000;
+            _timer.Tick += (s, e) => TickStatus();
+            _timer.Start();
+        }
+
+        private string FavPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "favorites.txt"); } }
+
+        private void LoadFavorites()
+        {
+            try
+            {
+                if (File.Exists(FavPath))
+                    foreach (string line in File.ReadAllLines(FavPath))
+                        if (line.Trim().Length > 0) _favorites.Add(line.Trim());
+            }
+            catch { }
+        }
+
+        private void SaveFavorites()
+        {
+            try { File.WriteAllLines(FavPath, new List<string>(_favorites)); } catch { }
+        }
+
+        private void ScanForms()
+        {
+            _formTypes.Clear();
+            try
+            {
+                foreach (Type t in Assembly.GetExecutingAssembly().GetTypes())
+                    if (t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Form)) && t.GetConstructor(Type.EmptyTypes) != null)
+                        _formTypes.Add(t);
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                foreach (Type t in ex.Types)
+                    if (t != null && t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Form)) && t.GetConstructor(Type.EmptyTypes) != null)
+                        _formTypes.Add(t);
+            }
+            _formTypes.Sort(delegate(Type a, Type b) { return string.Compare(a.Name, b.Name, StringComparison.Ordinal); });
+            ApplyFilter();
+            TickStatus();
+        }
+
+        private static bool IsOpen(Type t)
+        {
+            foreach (Form f in Application.OpenForms) if (f != null && f.GetType() == t) return true;
+            return false;
+        }
+
+        private void ApplyFilter()
+        {
+            _formsList.Items.Clear();
+            string q = _search.Text.Trim().ToLowerInvariant();
+            foreach (Type t in _formTypes)
+            {
+                if (q.Length > 0 && t.Name.ToLowerInvariant().IndexOf(q, StringComparison.Ordinal) < 0) continue;
+                if (_tab == TabMode.Open && !IsOpen(t)) continue;
+                if (_tab == TabMode.Fav && !_favorites.Contains(t.Name)) continue;
+                _formsList.Items.Add(t.Name);
+            }
+            if (_formsList.Items.Count > 0 && _formsList.SelectedIndex < 0) _formsList.SelectedIndex = 0;
+            _countLabel.Text = "Найдено форм:  " + _formTypes.Count.ToString();
+            _stFound.Text = "Форм найдено:  " + _formTypes.Count.ToString();
+            UpdateProperties();
+        }
+
+        private Type SelectedType()
+        {
+            string name = _formsList.SelectedItem as string;
+            if (name == null) return null;
+            foreach (Type t in _formTypes) if (t.Name == name) return t;
+            return null;
+        }
+
+        private FileInfo FindSource(string fileName)
+        {
+            string folder = _folderText.Text.Trim();
+            if (folder.Length > 0)
+            {
+                string p = Path.Combine(folder, fileName);
+                if (File.Exists(p)) return new FileInfo(p);
+            }
+            DirectoryInfo dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            for (int i = 0; i < 5 && dir != null; i++)
+            {
+                string p = Path.Combine(dir.FullName, fileName);
+                if (File.Exists(p)) return new FileInfo(p);
+                dir = dir.Parent;
+            }
+            return null;
+        }
+
+        private void UpdateProperties()
+        {
+            Type t = SelectedType();
+            if (t == null) { _propClass.Text = "—"; _propFile.Text = "—"; _propLines.Text = "—"; _propMod.Text = "—"; return; }
+            _propClass.Text = t.Name;
+            _propFile.Text = t.Name + ".cs";
+            FileInfo fi = FindSource(t.Name + ".cs");
+            if (fi != null)
+            {
+                int lines = 0;
+                try { lines = File.ReadAllLines(fi.FullName).Length; } catch { }
+                _propLines.Text = lines.ToString();
+                _propMod.Text = fi.LastWriteTime.ToString("dd.MM.yyyy HH:mm");
+            }
+            else { _propLines.Text = "—"; _propMod.Text = "—"; }
+        }
+
+        private void Log(string msg)
+        {
+            _log.SelectionStart = _log.TextLength;
+            _log.SelectionLength = 0;
+            _log.SelectionColor = Accent;
+            _log.AppendText(DateTime.Now.ToString("HH:mm:ss") + "   ");
+            _log.SelectionColor = TextMain;
+            _log.AppendText(msg + Environment.NewLine);
+            _log.ScrollToCaret();
+        }
+
+        private void TickStatus()
+        {
+            _stClock.Text = DateTime.Now.ToString("HH:mm:ss");
+            _stOpen.Text = "Открытых окон:  " + Application.OpenForms.Count.ToString();
+        }
+
+                private bool EnsureProjectFolder()
+        {
+            if (_projectConfirmed && Directory.Exists(_folderText.Text.Trim())) return true;
+            using (FolderBrowserDialog d = new FolderBrowserDialog())
+            {
+                d.Description = "Укажи расположение проекта (где искать файлы)";
+                d.ShowNewFolderButton = false;
+                string cur = _folderText.Text.Trim();
+                d.SelectedPath = Directory.Exists(cur) ? cur : Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                if (d.ShowDialog(this) != DialogResult.OK)
+                {
+                    Log("Отмена: расположение проекта не указано");
+                    return false;
+                }
+                _folderText.Text = d.SelectedPath;
+                _projectConfirmed = true;
+                UpdateProperties();
+                Log("Путь проекта задан: " + d.SelectedPath);
+                return true;
+            }
+        }
+private void OpenSelected()
+        {
+            Type t = SelectedType();
+            if (t == null) return;
+            if (!EnsureProjectFolder()) return;
+            Form f = (Form)Activator.CreateInstance(t);
+            f.Show();
+            Log("Форма " + t.Name + " открыта");
+            TickStatus();
+        }
+
+        private void DuplicateSelected()
+        {
+            Type t = SelectedType();
+            if (t == null) return;
+            Form open = null;
+            foreach (Form f in Application.OpenForms) if (f != null && f.GetType() == t) { open = f; break; }
+            if (open != null) { SafeFormDuplicator.OpenDuplicate(open); Log("Дублирование окна " + t.Name + " выполнено успешно"); }
+            else { Form f2 = (Form)Activator.CreateInstance(t); f2.Show(); Log("Форма " + t.Name + " не была открыта — открыта новая"); }
+            TickStatus();
+        }
+
+        private void BrowseFolder()
+        {
+            using (FolderBrowserDialog d = new FolderBrowserDialog())
+            {
+                d.Description = "Выбери папку проекта";
+                d.ShowNewFolderButton = true;
+                string cur = _folderText.Text.Trim();
+                d.SelectedPath = Directory.Exists(cur) ? cur : Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                if (d.ShowDialog(this) == DialogResult.OK)
+                {
+                    _folderText.Text = d.SelectedPath;
+                _projectConfirmed = true;
+                    UpdateProperties();
+                    Log("Выбрана папка: " + d.SelectedPath);
+                }
+            }
+        }
+
+        private void SetTab(TabMode m)
+        {
+            _tab = m;
+            StyleTab(_tabAll, m == TabMode.All);
+            StyleTab(_tabOpen, m == TabMode.Open);
+            StyleTab(_tabFav, m == TabMode.Fav);
+            _formsList.SelectedIndex = -1;
+            ApplyFilter();
+        }
+
+        private void ToggleFavorite()
+        {
+            string name = _formsList.SelectedItem as string;
+            if (name == null) return;
+            if (_favorites.Contains(name)) { _favorites.Remove(name); Log("Убрано из избранного: " + name); }
+            else { _favorites.Add(name); Log("Добавлено в избранное: " + name); }
+            SaveFavorites();
+            if (_tab == TabMode.Fav) ApplyFilter();
+        }
+
+        private void DoTag(string tag)
+        {
+            if (tag == "open") OpenSelected();
+            else if (tag == "dup") DuplicateSelected();
+            else if (tag == "exit") Close();
+            else if (tag == "copy") { Type tc = SelectedType(); if (tc != null) Clipboard.SetText(tc.Name); }
+            else if (tag == "refresh") { ScanForms(); Log("Список форм обновлён"); }
+            else if (tag == "settings") MessageBox.Show(this, "Панель управления формами v2.4.1\nТема: тёмная\nАвтопоиск и безопасное дублирование\nby LERON", "Параметры", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            else if (tag == "about") MessageBox.Show(this, "Панель управления формами v2.4.1\n.NET 4.8 · WinForms\nby LERON", "Справка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void TitleMouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            ReleaseCapture();
+            SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, 0);
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == 0x84 && WindowState == FormWindowState.Normal)
+            {
+                base.WndProc(ref m);
+                int lp = m.LParam.ToInt32();
+                int x = unchecked((short)(lp & 0xFFFF));
+                int y = unchecked((short)((lp >> 16) & 0xFFFF));
+                Point p = PointToClient(new Point(x, y));
+                int b = 6;
+                bool left = p.X <= b, right = p.X >= ClientSize.Width - b, top = p.Y <= b, bottom = p.Y >= ClientSize.Height - b;
+                if (left && top) { m.Result = (IntPtr)13; return; }
+                if (right && top) { m.Result = (IntPtr)14; return; }
+                if (left && bottom) { m.Result = (IntPtr)16; return; }
+                if (right && bottom) { m.Result = (IntPtr)17; return; }
+                if (left) { m.Result = (IntPtr)10; return; }
+                if (right) { m.Result = (IntPtr)11; return; }
+                if (top) { m.Result = (IntPtr)12; return; }
+                if (bottom) { m.Result = (IntPtr)15; return; }
+                return;
+            }
+            base.WndProc(ref m);
+        }
+    }
+}
+
+
+------------------------------------------------
+FILE: DemoFormUi.cs
+SIZE: 26609 bytes
+------------------------------------------------
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Windows.Forms;
+using SafeWinForms;
+
+namespace Ekzamen
+{
+    public partial class DemoForm
+    {
+        private void BuildUi()
+        {
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.CenterScreen;
+            ClientSize = new Size(1180, 720);
+            MinimumSize = new Size(960, 600);
+            MaximizedBounds = Screen.PrimaryScreen.WorkingArea;
+            BackColor = BgMain;
+            ForeColor = TextMain;
+            Font = new Font("Segoe UI", 9F);
+            Text = "Панель управления формами";
+
+            BuildTitleBar();
+            BuildMenu();
+            BuildHeader();
+            BuildStatus();
+            BuildLeft();
+            BuildContent();
+            for (int i = 0; i < Controls.Count; i++) Controls.SetChildIndex(Controls[i], 0);
+        }
+
+        private void BuildTitleBar()
+        {
+            _titleBar = new Panel();
+            _titleBar.Dock = DockStyle.Top;
+            _titleBar.Height = 40;
+            _titleBar.BackColor = BgTitle;
+            _titleBar.MouseDown += TitleMouseDown;
+            _titleBar.MouseDoubleClick += delegate { ToggleMax(); };
+
+            Panel logo = new Panel();
+            logo.Size = new Size(22, 22);
+            logo.Location = new Point(12, 9);
+            logo.Paint += delegate(object s, PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (SolidBrush br = new SolidBrush(Accent))
+                {
+                    e.Graphics.FillRectangle(br, 0, 0, 10, 10);
+                    e.Graphics.FillRectangle(br, 12, 0, 10, 10);
+                    e.Graphics.FillRectangle(br, 0, 12, 10, 10);
+                    e.Graphics.FillRectangle(br, 12, 12, 10, 10);
+                }
+            };
+
+            _titleLabel = new Label();
+            _titleLabel.Text = "Панель управления формами";
+            _titleLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            _titleLabel.ForeColor = TextMain;
+            _titleLabel.AutoSize = false;
+            _titleLabel.Bounds = new Rectangle(42, 0, 500, 40);
+            _titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            _titleLabel.MouseDown += TitleMouseDown;
+            _titleLabel.MouseDoubleClick += delegate { ToggleMax(); };
+
+            Button btnClose = TitleButton("\u2715", true);
+            Button btnMax = TitleButton("\u25A1", false);
+            Button btnMin = TitleButton("\u2013", false);
+            btnClose.Click += delegate { Close(); };
+            btnMax.Click += delegate { ToggleMax(); };
+            btnMin.Click += delegate { WindowState = FormWindowState.Minimized; };
+
+            _titleBar.Controls.Add(_titleLabel);
+            _titleBar.Controls.Add(logo);
+            _titleBar.Controls.Add(btnMin);
+            _titleBar.Controls.Add(btnMax);
+            _titleBar.Controls.Add(btnClose);
+            Controls.Add(_titleBar);
+        }
+
+        private void ToggleMax()
+        {
+            WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
+        }
+
+        private Button TitleButton(string glyph, bool close)
+        {
+            Button b = new Button();
+            b.Text = glyph;
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderSize = 0;
+            b.Dock = DockStyle.Right;
+            b.Width = 46;
+            b.Height = 40;
+            b.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            b.Cursor = Cursors.Hand;
+            b.TabStop = false;
+            if (close)
+            {
+                b.BackColor = Color.FromArgb(232, 17, 35);
+                b.ForeColor = Color.White;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 60, 70);
+            }
+            else
+            {
+                b.BackColor = BgTitle;
+                b.ForeColor = TextMain;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(58, 58, 58);
+            }
+            return b;
+        }
+
+        private void BuildMenu()
+        {
+            MenuStrip menu = new MenuStrip();
+            menu.BackColor = BgBar;
+            menu.ForeColor = TextMain;
+            menu.Font = new Font("Segoe UI", 9F);
+            menu.Renderer = new DarkMenuRenderer();
+            menu.Items.Add(MenuWithChildren("Файл", new ToolStripItem[] { Mi("Выход", null, "exit") }));
+            menu.Items.Add(MenuWithChildren("Правка", new ToolStripItem[] { Mi("Копировать имя формы", null, "copy") }));
+            menu.Items.Add(MenuWithChildren("Вид", new ToolStripItem[] { Mi("Обновить", IconFactory.Refresh(), "refresh") }));
+            menu.Items.Add(MenuWithChildren("Инструменты", new ToolStripItem[] { Mi("Параметры", IconFactory.Gear(), "settings") }));
+            menu.Items.Add(MenuWithChildren("Справка", new ToolStripItem[] { Mi("О программе", null, "about") }));
+            ToolStripItem r1 = Mi("Параметры", IconFactory.Gear(), "settings"); r1.Alignment = ToolStripItemAlignment.Right; menu.Items.Add(r1);
+            ToolStripItem r2 = Mi("Дублировать", IconFactory.Copy(), "dup"); r2.Alignment = ToolStripItemAlignment.Right; menu.Items.Add(r2);
+            ToolStripItem r3 = Mi("Открыть", IconFactory.Folder(), "open"); r3.Alignment = ToolStripItemAlignment.Right; menu.Items.Add(r3);
+            ToolStripItem r4 = Mi("Обновить", IconFactory.Refresh(), "refresh"); r4.Alignment = ToolStripItemAlignment.Right; menu.Items.Add(r4);
+            MainMenuStrip = menu;
+            Controls.Add(menu);
+        }
+
+        private ToolStripMenuItem Mi(string text, Image img, string tag)
+        {
+            ToolStripMenuItem mi = new ToolStripMenuItem(text);
+            if (img != null) mi.Image = img;
+            mi.Tag = tag;
+            mi.Click += delegate { DoTag(tag); };
+            return mi;
+        }
+
+        private ToolStripMenuItem MenuWithChildren(string text, ToolStripItem[] children)
+        {
+            ToolStripMenuItem mi = new ToolStripMenuItem(text);
+            foreach (ToolStripItem c in children) mi.DropDownItems.Add(c);
+            return mi;
+        }
+
+        private void BuildHeader()
+        {
+            Panel header = new Panel();
+            header.Dock = DockStyle.Top;
+            header.Height = 96;
+            header.BackColor = BgMain;
+
+            Label title = new Label();
+            title.Text = "ПАНЕЛЬ УПРАВЛЕНИЯ ФОРМАМИ";
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = TextMain;
+            title.AutoSize = false;
+            title.Bounds = new Rectangle(24, 12, 760, 40);
+
+            Label sub = new Label();
+            sub.Text = "Тёмная тема  ·  автопоиск форм  ·  безопасное дублирование  ·  .NET 4.8";
+            sub.Font = new Font("Segoe UI", 9.5F);
+            sub.ForeColor = TextSoft;
+            sub.AutoSize = false;
+            sub.Bounds = new Rectangle(24, 56, 760, 22);
+
+            _search = new TextBox();
+            _search.Size = new Size(300, 28);
+            _search.Location = new Point(856, 16);
+            _search.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _search.BackColor = BgSide;
+            _search.ForeColor = TextMain;
+            _search.BorderStyle = BorderStyle.FixedSingle;
+            _search.Font = new Font("Segoe UI", 9.5F);
+            _search.TextChanged += delegate { ApplyFilter(); };
+
+            Label ver = new Label();
+            ver.Text = "v2.4.1";
+            ver.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            ver.ForeColor = Accent;
+            ver.AutoSize = false;
+            ver.Bounds = new Rectangle(1080, 52, 76, 26);
+            ver.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            ver.TextAlign = ContentAlignment.MiddleRight;
+
+            header.Controls.Add(title);
+            header.Controls.Add(sub);
+            header.Controls.Add(_search);
+            header.Controls.Add(ver);
+
+            Panel accentLine = new Panel();
+            accentLine.Dock = DockStyle.Top;
+            accentLine.Height = 2;
+            accentLine.BackColor = Accent;
+
+            Controls.Add(header);
+            Controls.Add(accentLine);
+            SendMessageStr(_search.Handle, EM_SETCUEBANNER, IntPtr.Zero, "Поиск формы по имени...");
+        }
+
+        private void BuildStatus()
+        {
+            Panel bottom = new Panel();
+            bottom.Dock = DockStyle.Bottom;
+            bottom.Height = 32;
+            bottom.BackColor = BgBar;
+
+            Label sign = new Label();
+            sign.Text = "by LERON";
+            sign.ForeColor = Accent;
+            sign.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            sign.AutoSize = false;
+            sign.Bounds = new Rectangle(14, 0, 110, 32);
+            sign.TextAlign = ContentAlignment.MiddleLeft;
+
+            Label ready = new Label();
+            ready.Text = "\u25CF Готово";
+            ready.ForeColor = OkGreen;
+            ready.AutoSize = false;
+            ready.Bounds = new Rectangle(150, 0, 110, 32);
+            ready.TextAlign = ContentAlignment.MiddleLeft;
+
+            _stOpen = new Label();
+            _stOpen.ForeColor = TextSoft;
+            _stOpen.AutoSize = false;
+            _stOpen.Bounds = new Rectangle(280, 0, 190, 32);
+            _stOpen.TextAlign = ContentAlignment.MiddleLeft;
+
+            _stFound = new Label();
+            _stFound.ForeColor = TextSoft;
+            _stFound.AutoSize = false;
+            _stFound.Bounds = new Rectangle(480, 0, 190, 32);
+            _stFound.TextAlign = ContentAlignment.MiddleLeft;
+
+            _stClock = new Label();
+            _stClock.ForeColor = TextMain;
+            _stClock.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            _stClock.AutoSize = false;
+            _stClock.Bounds = new Rectangle(1080, 0, 86, 32);
+            _stClock.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _stClock.TextAlign = ContentAlignment.MiddleRight;
+
+            bottom.Controls.Add(sign);
+            bottom.Controls.Add(ready);
+            bottom.Controls.Add(_stOpen);
+            bottom.Controls.Add(_stFound);
+            bottom.Controls.Add(_stClock);
+            Controls.Add(bottom);
+        }
+
+        private void BuildLeft()
+        {
+            Panel left = new Panel();
+            left.Dock = DockStyle.Left;
+            left.Width = 300;
+            left.BackColor = BgSide;
+            left.Padding = new Padding(14);
+
+            Label cap = new Label();
+            cap.Text = "ФОРМЫ ПРОЕКТА (АВТОПОИСК)";
+            cap.ForeColor = Accent;
+            cap.Font = new Font("Segoe UI", 10.5F, FontStyle.Bold);
+            cap.Dock = DockStyle.Top;
+            cap.Height = 30;
+            cap.TextAlign = ContentAlignment.MiddleLeft;
+
+            Panel tabs = new Panel();
+            tabs.Dock = DockStyle.Top;
+            tabs.Height = 34;
+            _tabAll = new Button();
+            _tabAll.Text = "Все";
+            _tabAll.Location = new Point(0, 0);
+            _tabAll.Size = new Size(86, 30);
+            _tabOpen = new Button();
+            _tabOpen.Text = "Открытые";
+            _tabOpen.Location = new Point(90, 0);
+            _tabOpen.Size = new Size(96, 30);
+            _tabFav = new Button();
+            _tabFav.Text = "Избранные";
+            _tabFav.Location = new Point(190, 0);
+            _tabFav.Size = new Size(82, 30);
+            _tabAll.Click += delegate { SetTab(TabMode.All); };
+            _tabOpen.Click += delegate { SetTab(TabMode.Open); };
+            _tabFav.Click += delegate { SetTab(TabMode.Fav); };
+            StyleTab(_tabAll, true);
+            StyleTab(_tabOpen, false);
+            StyleTab(_tabFav, false);
+            tabs.Controls.Add(_tabAll);
+            tabs.Controls.Add(_tabOpen);
+            tabs.Controls.Add(_tabFav);
+
+            Label colHead = new Label();
+            colHead.Text = "Имя формы";
+            colHead.ForeColor = TextSoft;
+            colHead.Dock = DockStyle.Top;
+            colHead.Height = 26;
+            colHead.TextAlign = ContentAlignment.MiddleLeft;
+            colHead.Padding = new Padding(6, 0, 0, 0);
+
+            _formsList = new ListBox();
+            _formsList.Dock = DockStyle.Fill;
+            _formsList.BackColor = BgSide;
+            _formsList.ForeColor = TextMain;
+            _formsList.BorderStyle = BorderStyle.FixedSingle;
+            _formsList.Font = new Font("Segoe UI", 10F);
+            _formsList.ItemHeight = 30;
+            _formsList.IntegralHeight = false;
+            _formsList.SelectedIndexChanged += delegate { UpdateProperties(); };
+            _formsList.DoubleClick += delegate { OpenSelected(); };
+            ContextMenuStrip cm = new ContextMenuStrip();
+            cm.Renderer = new DarkMenuRenderer();
+            cm.BackColor = BgBar;
+            cm.ForeColor = TextMain;
+            ToolStripMenuItem favItem = new ToolStripMenuItem("В избранное / убрать");
+            favItem.Click += delegate { ToggleFavorite(); };
+            cm.Items.Add(favItem);
+            _formsList.ContextMenuStrip = cm;
+
+            _countLabel = new Label();
+            _countLabel.Dock = DockStyle.Bottom;
+            _countLabel.Height = 26;
+            _countLabel.ForeColor = TextSoft;
+            _countLabel.TextAlign = ContentAlignment.MiddleLeft;
+
+            left.Controls.Add(_formsList);
+            left.Controls.Add(_countLabel);
+            left.Controls.Add(colHead);
+            left.Controls.Add(tabs);
+            left.Controls.Add(cap);
+            Controls.Add(left);
+        }
+
+        private void BuildContent()
+        {
+            Panel content = new Panel();
+            content.Dock = DockStyle.Fill;
+            content.Padding = new Padding(16);
+
+            Panel cardPath = Card();
+            cardPath.Dock = DockStyle.Top;
+            cardPath.Height = 112;
+            Label capPath = CardCap("ПУТЬ К ПРОЕКТУ");
+            Label lblPath = new Label();
+            lblPath.Text = "Папка проекта (выбор через «Обзор»):";
+            lblPath.ForeColor = TextSoft;
+            lblPath.Dock = DockStyle.Top;
+            lblPath.Height = 22;
+            lblPath.Padding = new Padding(14, 0, 0, 0);
+            lblPath.TextAlign = ContentAlignment.MiddleLeft;
+            Panel rowPath = new Panel();
+            rowPath.Dock = DockStyle.Top;
+            rowPath.Height = 36;
+            rowPath.Padding = new Padding(14, 0, 14, 0);
+            _folderText = new TextBox();
+            _folderText.Name = "textBoxFolder";
+            _folderText.Dock = DockStyle.Fill;
+            _folderText.BackColor = Color.FromArgb(24, 24, 24);
+            _folderText.ForeColor = TextMain;
+            _folderText.BorderStyle = BorderStyle.FixedSingle;
+            _folderText.Font = new Font("Segoe UI", 9.5F);
+            _folderText.Text = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            _btnBrowse = new Button();
+            _btnBrowse.Text = "Обзор...";
+            _btnBrowse.Dock = DockStyle.Right;
+            _btnBrowse.Width = 110;
+            _btnBrowse.Height = 30;
+            StyleButton(_btnBrowse, false);
+            _btnBrowse.Click += delegate { BrowseFolder(); };
+            rowPath.Controls.Add(_folderText);
+            rowPath.Controls.Add(_btnBrowse);
+            cardPath.Controls.Add(rowPath);
+            cardPath.Controls.Add(lblPath);
+            cardPath.Controls.Add(capPath);
+
+            Panel mid = new Panel();
+            mid.Dock = DockStyle.Top;
+            mid.Height = 216;
+
+            Panel cardActs = Card();
+            cardActs.Dock = DockStyle.Left;
+            cardActs.Width = 470;
+            Label capActs = CardCap("ДЕЙСТВИЯ");
+            cardActs.Controls.Add(capActs);
+            _btnOpen = new Button();
+            _btnOpen.Text = "Открыть выбранную форму";
+            _btnOpen.Bounds = new Rectangle(16, 38, 438, 40);
+            _btnOpen.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            StyleButton(_btnOpen, true);
+            _btnOpen.Click += delegate { OpenSelected(); };
+            _btnDupSelected = new Button();
+            _btnDupSelected.Text = "Дублировать выбранную (если открыта)";
+            _btnDupSelected.Bounds = new Rectangle(16, 86, 438, 40);
+            _btnDupSelected.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            StyleButton(_btnDupSelected, false);
+            _btnDupSelected.Click += delegate { DuplicateSelected(); };
+            _btnDupSelf = new Button();
+            _btnDupSelf.Text = "Дублировать это окно";
+            _btnDupSelf.Bounds = new Rectangle(16, 134, 438, 40);
+            _btnDupSelf.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            StyleButton(_btnDupSelf, true);
+            _btnDupSelf.Click += delegate { SafeFormDuplicator.OpenDuplicate(this); Log("Дублирование окна выполнено успешно"); };
+            cardActs.Controls.Add(_btnOpen);
+            cardActs.Controls.Add(_btnDupSelected);
+            cardActs.Controls.Add(_btnDupSelf);
+
+            Panel cardProps = Card();
+            cardProps.Dock = DockStyle.Fill;
+            Label capProps = CardCap("СВОЙСТВА ВЫБРАННОЙ ФОРМЫ");
+            cardProps.Controls.Add(capProps);
+            string[] names = new string[] { "Имя класса:", "Файл:", "Строк кода:", "Изменена:" };
+            Label[] vals = new Label[4];
+            for (int i = 0; i < 4; i++)
+            {
+                Label n = new Label();
+                n.Text = names[i];
+                n.ForeColor = TextSoft;
+                n.AutoSize = false;
+                n.Bounds = new Rectangle(16, 40 + i * 32, 130, 24);
+                Label v = new Label();
+                v.Text = "—";
+                v.ForeColor = TextMain;
+                v.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+                v.AutoSize = false;
+                v.Bounds = new Rectangle(150, 40 + i * 32, 300, 24);
+                v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                cardProps.Controls.Add(n);
+                cardProps.Controls.Add(v);
+                vals[i] = v;
+            }
+            _propClass = vals[0];
+            _propFile = vals[1];
+            _propLines = vals[2];
+            _propMod = vals[3];
+
+            mid.Controls.Add(cardProps);
+            mid.Controls.Add(cardActs);
+
+            Panel cardLog = Card();
+            cardLog.Dock = DockStyle.Fill;
+            Label capLog = CardCap("ЖУРНАЛ ДЕЙСТВИЙ");
+            _log = new RichTextBox();
+            _log.Dock = DockStyle.Fill;
+            _log.BackColor = Color.FromArgb(24, 24, 24);
+            _log.ForeColor = TextMain;
+            _log.BorderStyle = BorderStyle.None;
+            _log.ReadOnly = true;
+            _log.HideSelection = false;
+            _log.ScrollBars = RichTextBoxScrollBars.Vertical;
+            _log.Font = new Font("Consolas", 9.5F);
+            _log.Margin = new Padding(0);
+            _log.Location = new Point(14, 32);
+            _log.Size = new Size(100, 100);
+            _log.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            cardLog.Controls.Add(_log);
+            cardLog.Controls.Add(capLog);
+
+            Panel sp1 = Spacer();
+            Panel sp2 = Spacer();
+
+            content.Controls.Add(cardLog);
+            content.Controls.Add(sp2);
+            content.Controls.Add(mid);
+            content.Controls.Add(sp1);
+            content.Controls.Add(cardPath);
+            Controls.Add(content);
+        }
+
+        private Panel Spacer()
+        {
+            Panel p = new Panel();
+            p.Dock = DockStyle.Top;
+            p.Height = 12;
+            p.BackColor = BgMain;
+            return p;
+        }
+
+        private Panel Card()
+        {
+            Panel p = new Panel();
+            p.BackColor = Color.FromArgb(32, 32, 32);
+            p.Paint += delegate(object s, PaintEventArgs e)
+            {
+                using (Pen pen = new Pen(Border))
+                    e.Graphics.DrawRectangle(pen, 0, 0, p.Width - 1, p.Height - 1);
+            };
+            return p;
+        }
+
+        private Label CardCap(string text)
+        {
+            Label l = new Label();
+            l.Text = text;
+            l.Dock = DockStyle.Top;
+            l.Height = 32;
+            l.ForeColor = Accent;
+            l.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            l.TextAlign = ContentAlignment.MiddleLeft;
+            l.Padding = new Padding(14, 0, 0, 0);
+            return l;
+        }
+
+        private static void StyleButton(Button b, bool primary)
+        {
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderSize = 1;
+            b.Cursor = Cursors.Hand;
+            b.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            if (primary)
+            {
+                b.BackColor = Primary;
+                b.ForeColor = Color.White;
+                b.FlatAppearance.BorderColor = Primary;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(76, 127, 188);
+            }
+            else
+            {
+                b.BackColor = Color.FromArgb(45, 45, 48);
+                b.ForeColor = TextMain;
+                b.FlatAppearance.BorderColor = Border;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(58, 58, 62);
+            }
+        }
+
+        private void StyleTab(Button b, bool active)
+        {
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderSize = 1;
+            b.Cursor = Cursors.Hand;
+            b.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            if (active)
+            {
+                b.BackColor = Color.FromArgb(32, 32, 32);
+                b.ForeColor = Accent;
+                b.FlatAppearance.BorderColor = Accent;
+            }
+            else
+            {
+                b.BackColor = Color.FromArgb(45, 45, 48);
+                b.ForeColor = TextSoft;
+                b.FlatAppearance.BorderColor = Border;
+            }
+        }
+    }
+
+    internal static class IconFactory
+    {
+        private static readonly Color Ic = Color.FromArgb(220, 220, 220);
+
+        internal static Image Refresh()
+        {
+            Bitmap b = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(b))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                using (Pen p = new Pen(Ic, 1.6f))
+                using (SolidBrush br = new SolidBrush(Ic))
+                {
+                    g.DrawArc(p, 2, 3, 12, 12, -60, 300);
+                    g.FillPolygon(br, new Point[] { new Point(8, 0), new Point(14, 3), new Point(8, 6) });
+                }
+            }
+            return b;
+        }
+
+        internal static Image Folder()
+        {
+            Bitmap b = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(b))
+            using (SolidBrush br = new SolidBrush(Ic))
+            {
+                g.FillRectangle(br, 1, 3, 6, 3);
+                g.FillRectangle(br, 1, 5, 14, 8);
+            }
+            return b;
+        }
+
+        internal static Image Copy()
+        {
+            Bitmap b = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(b))
+            using (Pen p = new Pen(Ic, 1.4f))
+            {
+                g.DrawRectangle(p, 2, 2, 9, 9);
+                g.DrawRectangle(p, 5, 5, 9, 9);
+            }
+            return b;
+        }
+
+        internal static Image Gear()
+        {
+            Bitmap b = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(b))
+            using (Pen p = new Pen(Ic, 1.6f))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.DrawEllipse(p, 4, 4, 8, 8);
+                for (int i = 0; i < 8; i++)
+                {
+                    double a = i * Math.PI / 4.0;
+                    g.DrawLine(p, 8 + (float)Math.Cos(a) * 6, 8 + (float)Math.Sin(a) * 6, 8 + (float)Math.Cos(a) * 8, 8 + (float)Math.Sin(a) * 8);
+                }
+            }
+            return b;
+        }
+    }
+
+    internal class DarkMenuRenderer : ToolStripProfessionalRenderer
+    {
+        public DarkMenuRenderer() : base(new DarkColorTable()) { }
+
+        protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
+    }
+
+    internal class DarkColorTable : ProfessionalColorTable
+    {
+        public override Color MenuStripGradientBegin { get { return DemoForm.BgBar; } }
+        public override Color MenuStripGradientEnd { get { return DemoForm.BgBar; } }
+        public override Color MenuItemSelected { get { return Color.FromArgb(58, 58, 62); } }
+        public override Color MenuItemSelectedGradientBegin { get { return Color.FromArgb(58, 58, 62); } }
+        public override Color MenuItemSelectedGradientEnd { get { return Color.FromArgb(58, 58, 62); } }
+        public override Color MenuItemBorder { get { return DemoForm.Accent; } }
+        public override Color ImageMarginGradientBegin { get { return DemoForm.BgBar; } }
+        public override Color ImageMarginGradientMiddle { get { return DemoForm.BgBar; } }
+        public override Color ImageMarginGradientEnd { get { return DemoForm.BgBar; } }
+        public override Color ToolStripDropDownBackground { get { return DemoForm.BgBar; } }
+    }
+}
+
+
+------------------------------------------------
+FILE: Ekzamen.csproj
+SIZE: 553 bytes
+------------------------------------------------
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+</Project>
+
+
+------------------------------------------------
+FILE: Program.cs
+SIZE: 1431 bytes
+------------------------------------------------
+using System;
+using System.Windows.Forms;
+
+namespace Ekzamen
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                var ex = e.ExceptionObject as Exception;
+                var msg = ex != null ? ex.ToString() : (e.ExceptionObject ?? "unknown").ToString();
+                Console.Error.WriteLine("FATAL: " + msg);
+                try { MessageBox.Show(msg, "FATAL EXCEPTION", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { }
+            };
+            Application.ThreadException += (s, e) =>
+            {
+                Console.Error.WriteLine("UI: " + e.Exception);
+                try { MessageBox.Show(e.Exception.ToString(), "UI EXCEPTION", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { }
+            };
+            try
+            {
+                Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new DemoForm());
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("MAIN: " + ex);
+                try { MessageBox.Show(ex.ToString(), "MAIN EXCEPTION", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { }
+            }
+        }
+    }
+}
+
+
+------------------------------------------------
+FILE: push-to-github.bat
+SIZE: 2001 bytes
+------------------------------------------------
+@echo off
+chcp 65001 >nul 2>&1
+setlocal enabledelayedexpansion
+
+cd /d "C:\Users\Пользователь\Desktop\cli"
+
+echo.
+echo ================================================================
+echo   LERON CLI · PUSH TO GITHUB
+echo ================================================================
+echo.
+echo   Репо: https://github.com/TheLER0N/New-Era
+echo.
+echo   [1] Полная перезапись (force push) — удалит старую историю
+echo   [2] Обновление — обычный коммит поверх истории
+echo   [3] Отмена
+echo.
+
+set /p "CHOICE=  Выбери действие [1/2/3] > "
+
+if "%CHOICE%"=="3" goto :end
+if "%CHOICE%"=="1" goto :full_rewrite
+if "%CHOICE%"=="2" goto :normal_push
+goto :end
+
+:full_rewrite
+echo.
+echo   [!] Удаляю старую историю (.git)...
+if exist ".git" rmdir /s /q ".git"
+git init -b main
+git remote add origin https://github.com/TheLER0N/New-Era.git 2>nul
+goto :commit
+
+:normal_push
+echo.
+echo   [i] Обновление существующей истории...
+if not exist ".git" (
+    git init -b main
+    git remote add origin https://github.com/TheLER0N/New-Era.git 2>nul
+)
+goto :commit
+
+:commit
+:: Создаём .gitignore если его нет
+if not exist ".gitignore" (
+    (
+        echo bin/
+        echo obj/
+        echo .vs/
+        echo *.user
+        echo logs/
+        echo program/sending and receiving/logs/
+        echo config.json
+        echo *.exe
+        echo Thumbs.db
+    ) > ".gitignore"
+)
+
+git add -A
+
+echo.
+set /p "MSG=  Сообщение коммита [LERON CLI update] > "
+
+if "!MSG!"=="" set "MSG=LERON CLI update"
+
+git commit -m "!MSG!"
+
+if "%CHOICE%"=="1" (
+    echo.
+    echo   [!] Force push в origin main...
+    git push -f -u origin main
+) else (
+    echo.
+    echo   [i] Push в origin main...
+    git push -u origin main
+)
+
+:end
+echo.
+echo   Готово.
+pause
+
+
+------------------------------------------------
+FILE: SafeFormDuplicator.cs
+SIZE: 7255 bytes
+------------------------------------------------
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace SafeWinForms
+{
+    public static class SafeFormDuplicator
+    {
+        public static Form OpenDuplicate(Form source)
+        {
+            Form copy = CreateDuplicate(source);
+            if (copy != null) copy.Show();
+            return copy;
+        }
+
+        public static Form CreateDuplicate(Form source)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            Form copy = (Form)Activator.CreateInstance(source.GetType());
+            CopyControlValues(source, copy);
+            return copy;
+        }
+
+        public static void CopyControlValues(Control source, Control target)
+        {
+            if (source == null || target == null) return;
+
+            CopySingleControl(source, target);
+
+            foreach (Control sourceChild in source.Controls)
+            {
+                if (string.IsNullOrEmpty(sourceChild.Name)) continue;
+
+                Control[] found = target.Controls.Find(sourceChild.Name, false);
+                if (found != null && found.Length > 0)
+                {
+                    CopyControlValues(sourceChild, found[0]);
+                }
+            }
+        }
+
+        private static void CopySingleControl(Control source, Control target)
+        {
+            try
+            {
+                target.Text = source.Text;
+
+                Form sourceForm = source as Form;
+                Form targetForm = target as Form;
+                if (sourceForm != null && targetForm != null)
+                {
+                    targetForm.Size = sourceForm.Size;
+                    targetForm.StartPosition = sourceForm.StartPosition;
+                    return;
+                }
+
+                CheckBox sourceCheck = source as CheckBox;
+                CheckBox targetCheck = target as CheckBox;
+                if (sourceCheck != null && targetCheck != null)
+                {
+                    targetCheck.Checked = sourceCheck.Checked;
+                    return;
+                }
+
+                RadioButton sourceRadio = source as RadioButton;
+                RadioButton targetRadio = target as RadioButton;
+                if (sourceRadio != null && targetRadio != null)
+                {
+                    targetRadio.Checked = sourceRadio.Checked;
+                    return;
+                }
+
+                ComboBox sourceCombo = source as ComboBox;
+                ComboBox targetCombo = target as ComboBox;
+                if (sourceCombo != null && targetCombo != null)
+                {
+                    if (sourceCombo.SelectedIndex >= 0 && sourceCombo.SelectedIndex < targetCombo.Items.Count)
+                        targetCombo.SelectedIndex = sourceCombo.SelectedIndex;
+                    else
+                        targetCombo.Text = sourceCombo.Text;
+                    return;
+                }
+
+                ListBox sourceList = source as ListBox;
+                ListBox targetList = target as ListBox;
+                if (sourceList != null && targetList != null)
+                {
+                    targetList.ClearSelected();
+                    foreach (int index in sourceList.SelectedIndices)
+                    {
+                        if (index >= 0 && index < targetList.Items.Count)
+                            targetList.SetSelected(index, true);
+                    }
+                    return;
+                }
+
+                CheckedListBox sourceChecked = source as CheckedListBox;
+                CheckedListBox targetChecked = target as CheckedListBox;
+                if (sourceChecked != null && targetChecked != null)
+                {
+                    for (int i = 0; i < sourceChecked.Items.Count && i < targetChecked.Items.Count; i++)
+                        targetChecked.SetItemChecked(i, sourceChecked.GetItemChecked(i));
+                    return;
+                }
+
+                NumericUpDown sourceNumeric = source as NumericUpDown;
+                NumericUpDown targetNumeric = target as NumericUpDown;
+                if (sourceNumeric != null && targetNumeric != null)
+                {
+                    decimal value = sourceNumeric.Value;
+                    if (value < targetNumeric.Minimum) value = targetNumeric.Minimum;
+                    if (value > targetNumeric.Maximum) value = targetNumeric.Maximum;
+                    targetNumeric.Value = value;
+                    return;
+                }
+
+                DateTimePicker sourceDate = source as DateTimePicker;
+                DateTimePicker targetDate = target as DateTimePicker;
+                if (sourceDate != null && targetDate != null)
+                {
+                    DateTime value = sourceDate.Value;
+                    if (value < targetDate.MinDate) value = targetDate.MinDate;
+                    if (value > targetDate.MaxDate) value = targetDate.MaxDate;
+                    targetDate.Value = value;
+                    return;
+                }
+
+                TrackBar sourceTrack = source as TrackBar;
+                TrackBar targetTrack = target as TrackBar;
+                if (sourceTrack != null && targetTrack != null)
+                {
+                    int value = sourceTrack.Value;
+                    if (value < targetTrack.Minimum) value = targetTrack.Minimum;
+                    if (value > targetTrack.Maximum) value = targetTrack.Maximum;
+                    targetTrack.Value = value;
+                    return;
+                }
+
+                TabControl sourceTabs = source as TabControl;
+                TabControl targetTabs = target as TabControl;
+                if (sourceTabs != null && targetTabs != null)
+                {
+                    if (sourceTabs.SelectedIndex >= 0 && sourceTabs.SelectedIndex < targetTabs.TabPages.Count)
+                        targetTabs.SelectedIndex = sourceTabs.SelectedIndex;
+                    return;
+                }
+
+                DataGridView sourceGrid = source as DataGridView;
+                DataGridView targetGrid = target as DataGridView;
+                if (sourceGrid != null && targetGrid != null)
+                {
+                    CopyGrid(sourceGrid, targetGrid);
+                }
+            }
+            catch { }
+        }
+
+        private static void CopyGrid(DataGridView source, DataGridView target)
+        {
+            if (source.DataSource != null || target.DataSource != null) return;
+
+            int rows = Math.Min(source.Rows.Count, target.Rows.Count);
+            int cols = Math.Min(source.Columns.Count, target.Columns.Count);
+
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < cols; x++)
+                {
+                    try { target[x, y].Value = source[x, y].Value; } catch { }
+                }
+            }
+
+            try
+            {
+                if (source.CurrentCell != null)
+                {
+                    int row = source.CurrentCell.RowIndex;
+                    int col = source.CurrentCell.ColumnIndex;
+                    if (row < target.Rows.Count && col < target.Columns.Count)
+                        target.CurrentCell = target[col, row];
+                }
+            }
+            catch { }
+        }
+    }
+}
+
+==================== SUMMARY ====================
+  Source files : 7
+  Report file  : ekzamen_report.txt
+================================================================
