@@ -25,15 +25,21 @@ echo.
 echo   [!] Removing old history (.git)...
 if exist ".git" rmdir /s /q ".git"
 git init -b main
-git remote add origin https://github.com/TheLER0N/tool-for-exam.git 2>nul
-goto :commit
+goto :add_remote
 
 :normal_push
 echo.
 echo   [i] Updating existing history...
 if not exist ".git" (
     git init -b main
-    git remote add origin https://github.com/TheLER0N/tool-for-exam.git 2>nul
+)
+goto :add_remote
+
+:add_remote
+git remote get-url origin >nul 2>&1
+if errorlevel 1 (
+    echo   [i] Adding remote origin...
+    git remote add origin https://github.com/TheLER0N/tool-for-exam.git
 )
 goto :commit
 
@@ -49,10 +55,14 @@ if not exist ".gitignore" (
         echo *.log
         echo favorites.txt
         echo *_report.txt
+        echo push-to-github.bat
         echo Thumbs.db
     ) > ".gitignore"
 )
+echo   [i] Untracking build artifacts (bin/obj) if any...
+git rm -r --cached bin obj >nul 2>&1
 git add -A
+git status --short
 echo.
 set /p "MSG=  Commit message [Tool for Exam update] > "
 if "!MSG!"=="" set "MSG=Tool for Exam update"
