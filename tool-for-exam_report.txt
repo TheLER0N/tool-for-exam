@@ -1,6 +1,6 @@
 ﻿================================================================
   PROJECT REPORT : tool-for-exam
-  GENERATED      : 07.09.2026 11:41:23
+  GENERATED      : 07.09.2026 12:11:09
   PATH           : C:\Users\290-23\Desktop\exam\tool-for-exam
 ================================================================
 
@@ -16,6 +16,7 @@ C:\Users\290-23\Desktop\exam\tool-for-exam
 +---MyForm.DemoFormUi.cs
 +---Program.cs
 +---push-to-github.bat
++---release-to-github.bat
 \---SafeFormDuplicator.cs
 
 ==================== SOURCE FILES ====================
@@ -108,7 +109,7 @@ pause
 
 ------------------------------------------------
 FILE: DemoForm.cs
-SIZE: 9312 bytes
+SIZE: 14889 bytes
 ------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -166,6 +167,7 @@ namespace Ekzamen
             UpdateHint();
             Log("Панель запущена, тема: тёмная");
             Log("Автопоиск: найдено " + _forms.Count.ToString() + " форм в проекте");
+            _nameText.Text = GenerateFreeName();
         }
 
         private static string GuessProjectFolder()
@@ -219,10 +221,38 @@ namespace Ekzamen
             }
         }
 
-        private void UpdateHint()
+                private string GenerateFreeName()
+        {
+            string folder = _folderText.Text.Trim();
+            for (int i = 1; i < 1000; i++)
+            {
+                string n = "NewForm" + i;
+                string path = System.IO.Path.Combine(folder, n + ".cs");
+                if (!System.IO.File.Exists(path) && !_forms.Exists(x => x.Name == n)) return n;
+            }
+            return "Form" + DateTime.Now.Ticks.ToString();
+        }
+private void UpdateHint()
         {
             string n = _nameText.Text.Trim();
-            _hintLabel.Text = n.Length > 0 ? "Файл будет создан как " + n + ".cs" : "Введи имя новой формы";
+            if (n.Length == 0) { _hintLabel.Text = "Введи имя новой формы"; return; }
+            if (!Regex.IsMatch(n, @"^[A-Za-z_]\w*$")) { _hintLabel.Text = "Недопустимое имя (только латиница, цифры, _)"; return; }
+            string folder = _folderText.Text.Trim();
+            if (Directory.Exists(folder))
+            {
+                foreach (string f in Directory.GetFiles(folder, "*.cs", SearchOption.AllDirectories))
+                {
+                    string fn = Path.GetFileNameWithoutExtension(f);
+                    if (fn.Equals(n, StringComparison.OrdinalIgnoreCase) ||
+                        fn.Equals(n + ".Designer", StringComparison.OrdinalIgnoreCase) ||
+                        fn.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _hintLabel.Text = "Конфликт: " + Path.GetFileName(f) + " уже существует";
+                        return;
+                    }
+                }
+            }
+            _hintLabel.Text = "Файл будет создан как " + n + ".cs (+ Designer.cs если есть у оригинала)";
         }
 
         private FormEntry SelectedEntry()
@@ -240,41 +270,96 @@ namespace Ekzamen
                 if (!Directory.Exists(_folderText.Text.Trim())) return;
             }
             FormEntry src = SelectedEntry();
-            if (src == null) { Log("Ошибка: выбери исходную форму"); return; }
+            if (src == null) { Log("Ошибка: выбери исходную форму"); MessageBox.Show(this, "Выбери форму из списка слева", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             string newName = _nameText.Text.Trim();
-            if (!Regex.IsMatch(newName, @"^[A-Za-z_]\w*$")) { Log("Ошибка: недопустимое имя '" + newName + "'"); return; }
+            if (!Regex.IsMatch(newName, @"^[A-Za-z_]\w*$")) { Log("Ошибка: недопустимое имя " + newName); MessageBox.Show(this, "Недопустимое имя формы." + Environment.NewLine + "Допустимы: латиница, цифры, _ (начинается с буквы или _).", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             string folder = _folderText.Text.Trim();
-            if (File.Exists(Path.Combine(folder, newName + ".cs"))) { Log("Ошибка: файл " + newName + ".cs уже существует"); return; }
+            // Проверяем конфликты ДО создания файлов (ищем все возможные целевые имена)
+            string[] allCs = Directory.GetFiles(folder, "*.cs", SearchOption.AllDirectories);
+            foreach (string check in allCs)
+            {
+                string fn = Path.GetFileNameWithoutExtension(check);
+                string ext = Path.GetExtension(check);
+                if (fn.Equals(src.Name, StringComparison.OrdinalIgnoreCase) ||
+                    fn.Equals(src.Name + ".Designer", StringComparison.OrdinalIgnoreCase) ||
+                    fn.StartsWith(src.Name + ".", StringComparison.OrdinalIgnoreCase))
+                {
+                    string targetFn = newName + fn.Substring(src.Name.Length);
+                    string target = Path.Combine(Path.GetDirectoryName(check), targetFn + ext);
+                    if (File.Exists(target))
+                    {
+                        Log("Конфликт: " + target + " уже существует");
+                        MessageBox.Show(this, "Файл уже существует:" + Environment.NewLine + target + Environment.NewLine + Environment.NewLine + "Введи другое имя.", "Конфликт имён", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+            }
             try
             {
-                DuplicatePart(src.Path, src.Name, newName, true);
-                foreach (string extra in Directory.GetFiles(folder, "*.cs", SearchOption.TopDirectoryOnly))
+                var created = new List<string>();
+                created.Add(DuplicatePart(src.Path, src.Name, newName));
+                // Ищем все partial-части рекурсивно
+                foreach (string extra in allCs)
                 {
                     if (string.Equals(extra, src.Path, StringComparison.OrdinalIgnoreCase)) continue;
                     string t2;
                     try { t2 = File.ReadAllText(extra); } catch { continue; }
-                    if (!Regex.IsMatch(t2, @"partial\s+class\s+" + Regex.Escape(src.Name) + @"\b")) continue;
-                    DuplicatePart(extra, src.Name, newName, false);
+                    // Подходит если содержит "partial class OldName" или "class OldName"
+                    bool isPartial = Regex.IsMatch(t2, @"\bpartial\s+class\s+" + Regex.Escape(src.Name) + @"\b");
+                    bool isMain = Regex.IsMatch(t2, @"\bclass\s+" + Regex.Escape(src.Name) + @"\s*:\s*[^{]*\bForm\b");
+                    if (!isPartial && !isMain) continue;
+                    created.Add(DuplicatePart(extra, src.Name, newName));
                 }
-                Log("Дублирование: " + src.Name + ".cs  →  " + newName + ".cs выполнено");
+                foreach (string f in created) Log("Создан: " + f);
+                Log("Дублирование: " + src.Name + " → " + newName + " выполнено (" + created.Count + " файлов)");
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("Форма успешно продублирована!");
+                sb.AppendLine();
+                sb.AppendLine("Исходная: " + src.Name);
+                sb.AppendLine("Создана:  " + newName);
+                sb.AppendLine();
+                sb.AppendLine("Создано файлов: " + created.Count);
+                foreach (string f in created) sb.AppendLine("  • " + f);
+                MessageBox.Show(this, sb.ToString(), "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 ScanForms();
+                for (int i = 0; i < _forms.Count; i++)
+                {
+                    if (_forms[i].Name == newName) { _formsList.SelectedIndex = i; break; }
+                }
+                _nameText.Text = GenerateFreeName();
             }
             catch (Exception ex)
             {
                 Log("Ошибка дублирования: " + ex.Message);
+                MessageBox.Show(this, ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void DuplicatePart(string sourcePath, string oldName, string newName, bool isMain)
+        private string DuplicatePart(string sourcePath, string oldName, string newName)
         {
             string text = File.ReadAllText(sourcePath);
-            string newText = Regex.Replace(text, @"\b" + Regex.Escape(oldName) + @"\b", newName);
-            string oldFile = Path.GetFileName(sourcePath);
-            string newFile = isMain
-                ? newName + ".cs"
-                : Regex.Replace(oldFile, @"\b" + Regex.Escape(oldName) + @"\b", newName);
-            if (string.Equals(newFile, oldFile, StringComparison.OrdinalIgnoreCase)) newFile = newName + "." + oldFile;
-            File.WriteAllText(Path.Combine(Path.GetDirectoryName(sourcePath), newFile), newText, new System.Text.UTF8Encoding(false));
+            // Замена только в объявлениях классов, не в строках/комментариях
+            string newText = Regex.Replace(text,
+                @"(\b(?:public|internal|private|protected)\s+(?:static\s+|sealed\s+|abstract\s+|partial\s+)*class\s+)" + Regex.Escape(oldName) + @"\b",
+                "$1" + newName);
+            newText = Regex.Replace(newText, @"(\bpartial\s+class\s+)" + Regex.Escape(oldName) + @"\b", "$1" + newName);
+            // Замена конструктора: public OldName() -> public NewName()
+            newText = Regex.Replace(newText,
+                @"(\b(?:public|internal|private|protected)\s+)" + Regex.Escape(oldName) + @"\s*\(",
+                "$1" + newName + "(");
+            string oldFile = Path.GetFileNameWithoutExtension(sourcePath);
+            string ext = Path.GetExtension(sourcePath);
+            string dir = Path.GetDirectoryName(sourcePath);
+            string newFile;
+            if (oldFile.EndsWith(".Designer", StringComparison.OrdinalIgnoreCase))
+                newFile = newName + ".Designer" + ext;
+            else if (oldFile.Equals(oldName, StringComparison.OrdinalIgnoreCase))
+                newFile = newName + ext;
+            else
+                newFile = Regex.Replace(oldFile, @"\b" + Regex.Escape(oldName) + @"\b", newName) + ext;
+            string fullPath = Path.Combine(dir, newFile);
+            File.WriteAllText(fullPath, newText, new System.Text.UTF8Encoding(false));
+            return fullPath;
         }
 
         private void Log(string msg)
@@ -1625,6 +1710,140 @@ pause
 
 
 ------------------------------------------------
+FILE: release-to-github.bat
+SIZE: 4768 bytes
+------------------------------------------------
+@echo off
+chcp 65001 >nul 2>&1
+setlocal enabledelayedexpansion
+set "ROOT=%~dp0"
+set "PROJ=%ROOT%program\main\MainApp.csproj"
+set "BUILD_DIR=%ROOT%GUI result"
+
+echo.
+echo ================================================================
+echo   LERON · RELEASE TO GITHUB
+echo ================================================================
+echo.
+echo   Репозиторий: https://github.com/TheLER0N/New-Era
+echo.
+
+:: ── Проверка окружения ──────────────────────────────────────────
+where dotnet >nul 2>&1
+if !errorlevel! neq 0 (
+    echo   [XX] dotnet не найден. Установи .NET SDK.
+    pause
+    exit /b 1
+)
+
+if not exist "%PROJ%" (
+    echo   [XX] MainApp.csproj не найден: %PROJ%
+    pause
+    exit /b 1
+)
+
+:: ── Ввод данных релиза ──────────────────────────────────────────
+set /p "VER=   Версия (например 1.0.0): "
+if "!VER!"=="" (
+    echo   [XX] Версия не указана.
+    pause
+    exit /b 1
+)
+
+set /p "TITLE=   Название (Enter = LERON v!VER!): "
+if "!TITLE!"=="" set "TITLE=LERON v!VER!"
+
+set /p "DESC=    Описание (Enter = дефолт): "
+if "!DESC!"=="" set "DESC=LERON v!VER! — GUI с AI-агентом, WebView2 и gateway."
+
+echo.
+echo ================================================================
+echo   Версия   : !VER!
+echo   Название : !TITLE!
+echo   Проект   : %PROJ%
+echo   Сборка   : %BUILD_DIR%
+echo ================================================================
+echo.
+set /p "CONFIRM=   Продолжить? [Y/n]: "
+if /i "!CONFIRM!"=="n" (
+    echo   Отменено.
+    pause
+    exit /b 0
+)
+
+:: ── [1/4] Сборка Release ────────────────────────────────────────
+echo.
+echo   [1/4] Гашу старый gateway...
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr ":51234" ^| findstr "LISTENING"') do (
+    taskkill /PID %%P /F >nul 2>&1
+)
+timeout /t 1 >nul
+
+echo   [2/4] dotnet publish (Release)...
+if exist "%BUILD_DIR%" (
+    :: Не удаляем всю папку — бережём config.json и logs
+    for %%F in ("%BUILD_DIR%\*.exe" "%BUILD_DIR%\*.dll" "%BUILD_DIR%\*.json" "%BUILD_DIR%\*.pdb") do (
+        if /i not "%%~nxF"=="config.json" del "%%F" 2>nul
+    )
+    if exist "%BUILD_DIR%\runtimes" rd /s /q "%BUILD_DIR%\runtimes" 2>nul
+)
+dotnet publish "%PROJ%" -c Release -o "%BUILD_DIR%" --nologo -v q
+if !errorlevel! neq 0 (
+    echo.
+    echo   [XX] Сборка не удалась — повтори dotnet publish вручную.
+    pause
+    exit /b 1
+)
+echo   [OK] Собрано в %BUILD_DIR%
+
+:: ── [3/4] Создание ZIP ──────────────────────────────────────────
+echo.
+echo   [3/4] Создание архива...
+set "ZIP_NAME=LERON-!VER!-win-x64.zip"
+set "ZIP_PATH=%ROOT%release\!ZIP_NAME!"
+if not exist "%ROOT%release" mkdir "%ROOT%release"
+if exist "!ZIP_PATH!" del "!ZIP_PATH!"
+
+powershell -NoProfile -Command "Compress-Archive -Path '%BUILD_DIR%\*' -DestinationPath '!ZIP_PATH!' -Force"
+if !errorlevel! neq 0 (
+    echo   [XX] Не удалось создать архив.
+    pause
+    exit /b 1
+)
+
+for %%A in ("!ZIP_PATH!") do set /a "ZIP_MB=%%~zA / 1048576"
+echo   [OK] Архив: !ZIP_PATH! (~!ZIP_MB! MB)
+
+:: ── [4/4] Открытие страницы релиза ──────────────────────────────
+echo.
+echo   [4/4] Открываю GitHub Releases...
+echo.
+echo ================================================================
+echo   ГОТОВО!
+echo ================================================================
+echo.
+echo   Что сделать в браузере:
+echo.
+echo   1. В поле "Tag version" введи:   !VER!
+echo   2. В поле "Release title" введи: !TITLE!
+echo   3. В поле "Describe" вставь:     !DESC!
+echo   4. Нажми "attaching binaries"
+echo   5. Выбери файл: !ZIP_PATH!
+echo   6. Нажми "Publish release"
+echo.
+echo   Путь к архиву скопирован в буфер обмена —
+echo   в поле выбора файла нажми Ctrl+V и Enter.
+echo.
+
+:: Копируем путь в буфер
+echo|set /p="!ZIP_PATH!" | clip
+
+start "" "https://github.com/TheLER0N/New-Era/releases/new?tag=!VER!&title=!TITLE!"
+
+pause
+
+
+------------------------------------------------
 FILE: SafeFormDuplicator.cs
 SIZE: 7440 bytes
 ------------------------------------------------
@@ -1816,6 +2035,6 @@ namespace SafeWinForms
 }
 
 ==================== SUMMARY ====================
-  Source files : 10
+  Source files : 11
   Report file  : tool-for-exam_report.txt
 ================================================================
