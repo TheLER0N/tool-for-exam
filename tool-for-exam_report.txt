@@ -1,6 +1,6 @@
 ﻿================================================================
   PROJECT REPORT : tool-for-exam
-  GENERATED      : 07.09.2026 11:30:20
+  GENERATED      : 07.09.2026 11:41:23
   PATH           : C:\Users\290-23\Desktop\exam\tool-for-exam
 ================================================================
 
@@ -12,6 +12,8 @@ C:\Users\290-23\Desktop\exam\tool-for-exam
 +---DemoForm.cs
 +---DemoFormUi.cs
 +---Ekzamen.csproj
++---MyForm.cs
++---MyForm.DemoFormUi.cs
 +---Program.cs
 +---push-to-github.bat
 \---SafeFormDuplicator.cs
@@ -322,7 +324,7 @@ namespace Ekzamen
 
 ------------------------------------------------
 FILE: DemoFormUi.cs
-SIZE: 15050 bytes
+SIZE: 18357 bytes
 ------------------------------------------------
 using System;
 using System.Drawing;
@@ -335,13 +337,33 @@ namespace Ekzamen
     {
         private static readonly Color BgCard = Color.FromArgb(37, 37, 38);
         private static readonly Color BgInput = Color.FromArgb(24, 24, 24);
+        private static readonly Color Thumb = Color.FromArgb(100, 100, 108);
+
+        private Panel _logBar;
+        private bool _barDrag;
+        private int _barDragStartY;
+        private int _barDragStartFirst;
+        private LogScrollHook _logHook;
+
+        private sealed class LogScrollHook : NativeWindow
+        {
+            public Action OnScroll;
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+                if (m.Msg == 0x020A || m.Msg == 0x00B6 || m.Msg == 0x00B5)
+                {
+                    if (OnScroll != null) OnScroll();
+                }
+            }
+        }
 
         private void BuildUi()
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1000, 700);
-            MinimumSize = new Size(900, 620);
+            ClientSize = new Size(1000, 780);
+            MinimumSize = new Size(900, 640);
             MaximizedBounds = Screen.PrimaryScreen.WorkingArea;
             BackColor = BgMain;
             ForeColor = TextMain;
@@ -448,7 +470,7 @@ namespace Ekzamen
 
             Panel mid = new Panel();
             mid.Dock = DockStyle.Top;
-            mid.Height = 268;
+            mid.Height = 244;
 
             Panel leftCard = Card();
             leftCard.Dock = DockStyle.Left;
@@ -526,7 +548,7 @@ namespace Ekzamen
 
             Panel cardLog = Card();
             cardLog.Dock = DockStyle.Fill;
-            cardLog.Padding = new Padding(16, 8, 16, 12);
+            cardLog.Padding = new Padding(16, 8, 8, 12);
             Panel capLog = SectionCap("ЖУРНАЛ ДЕЙСТВИЙ");
             _log = new RichTextBox();
             _log.Dock = DockStyle.Fill;
@@ -535,9 +557,22 @@ namespace Ekzamen
             _log.BorderStyle = BorderStyle.None;
             _log.ReadOnly = true;
             _log.HideSelection = false;
-            _log.ScrollBars = RichTextBoxScrollBars.Vertical;
+            _log.ScrollBars = RichTextBoxScrollBars.None;
             _log.Font = new Font("Consolas", 9.5F);
+            _logBar = new Panel();
+            _logBar.Dock = DockStyle.Right;
+            _logBar.Width = 12;
+            _logBar.BackColor = BgInput;
+            _logBar.Paint += LogBarPaint;
+            _logBar.MouseDown += LogBarDown;
+            _logBar.MouseMove += LogBarMove;
+            _logBar.MouseUp += LogBarUp;
+            _log.TextChanged += delegate { _logBar.Invalidate(); };
+            _logHook = new LogScrollHook();
+            _logHook.OnScroll = delegate { _logBar.Invalidate(); };
+            _logHook.AssignHandle(_log.Handle);
             cardLog.Controls.Add(_log);
+            cardLog.Controls.Add(_logBar);
             cardLog.Controls.Add(capLog);
 
             Panel sp1 = Spacer();
@@ -555,6 +590,58 @@ namespace Ekzamen
             Controls.Add(header);
             BuildTitleBar();
         }
+
+        private int LogTotalLines() { return SendMessage(_log.Handle, 0x00BA, IntPtr.Zero, 0).ToInt32(); }
+        private int LogFirstLine() { return SendMessage(_log.Handle, 0x00CE, IntPtr.Zero, 0).ToInt32(); }
+        private int LogVisibleLines()
+        {
+            int h = _log.Font.Height;
+            return h > 0 ? _log.ClientSize.Height / h : 1;
+        }
+
+        private void LogBarPaint(object sender, PaintEventArgs e)
+        {
+            int total = LogTotalLines();
+            int vis = LogVisibleLines();
+            if (total <= vis) return;
+            int barH = _logBar.ClientSize.Height;
+            int thumbH = Math.Max(24, barH * vis / total);
+            int range = barH - thumbH;
+            if (range <= 0) return;
+            int y = range * LogFirstLine() / (total - vis);
+            using (SolidBrush br = new SolidBrush(Thumb))
+                e.Graphics.FillRectangle(br, 3, y, 6, thumbH);
+        }
+
+        private void LogBarDown(object sender, MouseEventArgs e)
+        {
+            _barDrag = true;
+            _barDragStartY = e.Y;
+            _barDragStartFirst = LogFirstLine();
+        }
+
+        private void LogBarMove(object sender, MouseEventArgs e)
+        {
+            if (!_barDrag) return;
+            int total = LogTotalLines();
+            int vis = LogVisibleLines();
+            if (total <= vis) return;
+            int barH = _logBar.ClientSize.Height;
+            int thumbH = Math.Max(24, barH * vis / total);
+            int range = barH - thumbH;
+            if (range <= 0) return;
+            int target = _barDragStartFirst + (e.Y - _barDragStartY) * (total - vis) / range;
+            if (target < 0) target = 0;
+            if (target > total - vis) target = total - vis;
+            int cur = LogFirstLine();
+            if (target != cur)
+            {
+                SendMessage(_log.Handle, 0x00B6, IntPtr.Zero, target - cur);
+                _logBar.Invalidate();
+            }
+        }
+
+        private void LogBarUp(object sender, MouseEventArgs e) { _barDrag = false; }
 
         private void BuildTitleBar()
         {
@@ -637,7 +724,7 @@ namespace Ekzamen
         {
             Panel p = new Panel();
             p.Dock = DockStyle.Top;
-            p.Height = 20;
+            p.Height = 16;
             p.BackColor = BgMain;
             return p;
         }
@@ -721,6 +808,688 @@ SIZE: 568 bytes
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
 </Project>
+
+
+------------------------------------------------
+FILE: MyForm.cs
+SIZE: 9308 bytes
+------------------------------------------------
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+
+namespace Ekzamen
+{
+    public partial class MyForm : Form
+    {
+        public static readonly Color BgMain = Color.FromArgb(30, 30, 30);
+        public static readonly Color BgBar = Color.FromArgb(36, 36, 36);
+        public static readonly Color BgTitle = Color.FromArgb(25, 25, 25);
+        public static readonly Color Border = Color.FromArgb(63, 63, 70);
+        public static readonly Color TextMain = Color.FromArgb(232, 232, 232);
+        public static readonly Color TextSoft = Color.FromArgb(157, 157, 157);
+        public static readonly Color Accent = Color.FromArgb(224, 166, 43);
+        public static readonly Color Primary = Color.FromArgb(61, 110, 168);
+        public static readonly Color OkGreen = Color.FromArgb(78, 201, 76);
+
+        private sealed class FormEntry
+        {
+            public string Name;
+            public string Path;
+        }
+
+        private readonly List<FormEntry> _forms = new List<FormEntry>();
+        private TextBox _folderText;
+        private Button _btnBrowse;
+        private ListBox _formsList;
+        private Label _countLabel;
+        private TextBox _nameText;
+        private Label _hintLabel;
+        private Button _btnDuplicate;
+        private RichTextBox _log;
+        private Label _stFound;
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HTCAPTION = 2;
+
+        public MyForm()
+        {
+            BuildUi();
+            _folderText.Text = GuessProjectFolder();
+            ScanForms();
+            UpdateHint();
+            Log("Панель запущена, тема: тёмная");
+            Log("Автопоиск: найдено " + _forms.Count.ToString() + " форм в проекте");
+        }
+
+        private static string GuessProjectFolder()
+        {
+            DirectoryInfo dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            for (int i = 0; i < 5 && dir != null; i++)
+            {
+                if (Directory.GetFiles(dir.FullName, "*.csproj").Length > 0) return dir.FullName;
+                dir = dir.Parent;
+            }
+            return Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        }
+
+        private void ScanForms()
+        {
+            _forms.Clear();
+            _formsList.Items.Clear();
+            string folder = _folderText.Text.Trim();
+            if (Directory.Exists(folder))
+            {
+                foreach (string file in Directory.GetFiles(folder, "*.cs", SearchOption.TopDirectoryOnly))
+                {
+                    string fn = Path.GetFileName(file);
+                    if (fn.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase)) continue;
+                    string text;
+                    try { text = File.ReadAllText(file); } catch { continue; }
+                    Match m = Regex.Match(text, @"(?:public\s+|internal\s+|private\s+)?(?:partial\s+)?class\s+(\w+)\s*:\s*[^\n{]*\bForm\b");
+                    if (m.Success) _forms.Add(new FormEntry { Name = m.Groups[1].Value, Path = file });
+                }
+            }
+            foreach (FormEntry e in _forms) _formsList.Items.Add(e.Name);
+            if (_formsList.Items.Count > 0) _formsList.SelectedIndex = 0;
+            _countLabel.Text = "Найдено форм:  " + _forms.Count.ToString();
+            _stFound.Text = "Форм найдено:  " + _forms.Count.ToString();
+        }
+
+        private void BrowseFolder()
+        {
+            using (FolderBrowserDialog d = new FolderBrowserDialog())
+            {
+                d.Description = "Папка проекта с .cs файлами форм";
+                d.ShowNewFolderButton = false;
+                string cur = _folderText.Text.Trim();
+                d.SelectedPath = Directory.Exists(cur) ? cur : Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                if (d.ShowDialog(this) == DialogResult.OK)
+                {
+                    _folderText.Text = d.SelectedPath;
+                    ScanForms();
+                    Log("Выбрана папка: " + d.SelectedPath);
+                }
+            }
+        }
+
+        private void UpdateHint()
+        {
+            string n = _nameText.Text.Trim();
+            _hintLabel.Text = n.Length > 0 ? "Файл будет создан как " + n + ".cs" : "Введи имя новой формы";
+        }
+
+        private FormEntry SelectedEntry()
+        {
+            int i = _formsList.SelectedIndex;
+            if (i < 0 || i >= _forms.Count) return null;
+            return _forms[i];
+        }
+
+        private void DuplicateForm()
+        {
+            if (!Directory.Exists(_folderText.Text.Trim()))
+            {
+                BrowseFolder();
+                if (!Directory.Exists(_folderText.Text.Trim())) return;
+            }
+            FormEntry src = SelectedEntry();
+            if (src == null) { Log("Ошибка: выбери исходную форму"); return; }
+            string newName = _nameText.Text.Trim();
+            if (!Regex.IsMatch(newName, @"^[A-Za-z_]\w*$")) { Log("Ошибка: недопустимое имя '" + newName + "'"); return; }
+            string folder = _folderText.Text.Trim();
+            if (File.Exists(Path.Combine(folder, newName + ".cs"))) { Log("Ошибка: файл " + newName + ".cs уже существует"); return; }
+            try
+            {
+                DuplicatePart(src.Path, src.Name, newName, true);
+                foreach (string extra in Directory.GetFiles(folder, "*.cs", SearchOption.TopDirectoryOnly))
+                {
+                    if (string.Equals(extra, src.Path, StringComparison.OrdinalIgnoreCase)) continue;
+                    string t2;
+                    try { t2 = File.ReadAllText(extra); } catch { continue; }
+                    if (!Regex.IsMatch(t2, @"partial\s+class\s+" + Regex.Escape(src.Name) + @"\b")) continue;
+                    DuplicatePart(extra, src.Name, newName, false);
+                }
+                Log("Дублирование: " + src.Name + ".cs  →  " + newName + ".cs выполнено");
+                ScanForms();
+            }
+            catch (Exception ex)
+            {
+                Log("Ошибка дублирования: " + ex.Message);
+            }
+        }
+
+        private void DuplicatePart(string sourcePath, string oldName, string newName, bool isMain)
+        {
+            string text = File.ReadAllText(sourcePath);
+            string newText = Regex.Replace(text, @"\b" + Regex.Escape(oldName) + @"\b", newName);
+            string oldFile = Path.GetFileName(sourcePath);
+            string newFile = isMain
+                ? newName + ".cs"
+                : Regex.Replace(oldFile, @"\b" + Regex.Escape(oldName) + @"\b", newName);
+            if (string.Equals(newFile, oldFile, StringComparison.OrdinalIgnoreCase)) newFile = newName + "." + oldFile;
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(sourcePath), newFile), newText, new System.Text.UTF8Encoding(false));
+        }
+
+        private void Log(string msg)
+        {
+            _log.SelectionStart = _log.TextLength;
+            _log.SelectionLength = 0;
+            _log.SelectionColor = Accent;
+            _log.AppendText(DateTime.Now.ToString("HH:mm:ss") + "   ");
+            _log.SelectionColor = TextMain;
+            _log.AppendText(msg + Environment.NewLine);
+            _log.ScrollToCaret();
+        }
+
+        private void TitleMouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            ReleaseCapture();
+            SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, 0);
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == 0x84 && WindowState == FormWindowState.Normal)
+            {
+                base.WndProc(ref m);
+                int lp = m.LParam.ToInt32();
+                int x = unchecked((short)(lp & 0xFFFF));
+                int y = unchecked((short)((lp >> 16) & 0xFFFF));
+                Point p = PointToClient(new Point(x, y));
+                int b = 6;
+                bool left = p.X <= b, right = p.X >= ClientSize.Width - b, top = p.Y <= b, bottom = p.Y >= ClientSize.Height - b;
+                if (left && top) { m.Result = (IntPtr)13; return; }
+                if (right && top) { m.Result = (IntPtr)14; return; }
+                if (left && bottom) { m.Result = (IntPtr)16; return; }
+                if (right && bottom) { m.Result = (IntPtr)17; return; }
+                if (left) { m.Result = (IntPtr)10; return; }
+                if (right) { m.Result = (IntPtr)11; return; }
+                if (top) { m.Result = (IntPtr)12; return; }
+                if (bottom) { m.Result = (IntPtr)15; return; }
+                return;
+            }
+            base.WndProc(ref m);
+        }
+    }
+}
+
+
+------------------------------------------------
+FILE: MyForm.DemoFormUi.cs
+SIZE: 18355 bytes
+------------------------------------------------
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Windows.Forms;
+
+namespace Ekzamen
+{
+    public partial class MyForm
+    {
+        private static readonly Color BgCard = Color.FromArgb(37, 37, 38);
+        private static readonly Color BgInput = Color.FromArgb(24, 24, 24);
+        private static readonly Color Thumb = Color.FromArgb(100, 100, 108);
+
+        private Panel _logBar;
+        private bool _barDrag;
+        private int _barDragStartY;
+        private int _barDragStartFirst;
+        private LogScrollHook _logHook;
+
+        private sealed class LogScrollHook : NativeWindow
+        {
+            public Action OnScroll;
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+                if (m.Msg == 0x020A || m.Msg == 0x00B6 || m.Msg == 0x00B5)
+                {
+                    if (OnScroll != null) OnScroll();
+                }
+            }
+        }
+
+        private void BuildUi()
+        {
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.CenterScreen;
+            ClientSize = new Size(1000, 780);
+            MinimumSize = new Size(900, 640);
+            MaximizedBounds = Screen.PrimaryScreen.WorkingArea;
+            BackColor = BgMain;
+            ForeColor = TextMain;
+            Font = new Font("Segoe UI", 9F);
+            Text = "Панель управления формами";
+
+            Panel header = new Panel();
+            header.Dock = DockStyle.Top;
+            header.Height = 96;
+            header.BackColor = BgMain;
+            Label title = new Label();
+            title.Text = "ПАНЕЛЬ УПРАВЛЕНИЯ ФОРМАМИ";
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = TextMain;
+            title.AutoSize = false;
+            title.Bounds = new Rectangle(28, 14, 700, 38);
+            Label sub = new Label();
+            sub.Text = "Тёмная тема  ·  дублирование форм  ·  .NET 4.8";
+            sub.Font = new Font("Segoe UI", 9.5F);
+            sub.ForeColor = TextSoft;
+            sub.AutoSize = false;
+            sub.Bounds = new Rectangle(28, 56, 700, 20);
+            Label ver = new Label();
+            ver.Text = "v1.0";
+            ver.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            ver.ForeColor = Accent;
+            ver.AutoSize = false;
+            ver.Bounds = new Rectangle(900, 52, 72, 24);
+            ver.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            ver.TextAlign = ContentAlignment.MiddleRight;
+            header.Controls.Add(title);
+            header.Controls.Add(sub);
+            header.Controls.Add(ver);
+
+            Panel accentLine = new Panel();
+            accentLine.Dock = DockStyle.Top;
+            accentLine.Height = 2;
+            accentLine.BackColor = Accent;
+
+            Panel bottom = new Panel();
+            bottom.Dock = DockStyle.Bottom;
+            bottom.Height = 34;
+            bottom.BackColor = BgBar;
+            Label sign = new Label();
+            sign.Text = "by LERON";
+            sign.ForeColor = Accent;
+            sign.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            sign.AutoSize = false;
+            sign.Bounds = new Rectangle(16, 0, 110, 34);
+            sign.TextAlign = ContentAlignment.MiddleLeft;
+            Label ready = new Label();
+            ready.Text = "\u25CF Готово";
+            ready.ForeColor = OkGreen;
+            ready.AutoSize = false;
+            ready.Bounds = new Rectangle(140, 0, 120, 34);
+            ready.TextAlign = ContentAlignment.MiddleLeft;
+            _stFound = new Label();
+            _stFound.ForeColor = TextSoft;
+            _stFound.AutoSize = false;
+            _stFound.Bounds = new Rectangle(800, 0, 184, 34);
+            _stFound.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _stFound.TextAlign = ContentAlignment.MiddleRight;
+            bottom.Controls.Add(sign);
+            bottom.Controls.Add(ready);
+            bottom.Controls.Add(_stFound);
+
+            Panel content = new Panel();
+            content.Dock = DockStyle.Fill;
+            content.Padding = new Padding(24);
+
+            Panel cardPath = Card();
+            cardPath.Dock = DockStyle.Top;
+            cardPath.Height = 80;
+            cardPath.Padding = new Padding(0, 4, 0, 10);
+            Panel capPath = SectionCap("ПУТЬ К ПРОЕКТУ");
+            Panel rowPath = new Panel();
+            rowPath.Dock = DockStyle.Top;
+            rowPath.Height = 34;
+            rowPath.Padding = new Padding(16, 0, 16, 0);
+            Label lblPath = new Label();
+            lblPath.Text = "Папка проекта:";
+            lblPath.ForeColor = TextMain;
+            lblPath.Dock = DockStyle.Left;
+            lblPath.Width = 110;
+            lblPath.TextAlign = ContentAlignment.MiddleLeft;
+            _btnBrowse = new Button();
+            _btnBrowse.Text = "Обзор...";
+            _btnBrowse.Dock = DockStyle.Right;
+            _btnBrowse.Width = 110;
+            StyleButton(_btnBrowse, false);
+            _btnBrowse.Click += delegate { BrowseFolder(); };
+            _folderText = new TextBox();
+            _folderText.Name = "textBoxFolder";
+            _folderText.Dock = DockStyle.Fill;
+            _folderText.BackColor = BgInput;
+            _folderText.ForeColor = TextMain;
+            _folderText.BorderStyle = BorderStyle.FixedSingle;
+            _folderText.Font = new Font("Segoe UI", 9.5F);
+            rowPath.Controls.Add(_folderText);
+            rowPath.Controls.Add(_btnBrowse);
+            rowPath.Controls.Add(lblPath);
+            cardPath.Controls.Add(rowPath);
+            cardPath.Controls.Add(capPath);
+
+            Panel mid = new Panel();
+            mid.Dock = DockStyle.Top;
+            mid.Height = 244;
+
+            Panel leftCard = Card();
+            leftCard.Dock = DockStyle.Left;
+            leftCard.Width = 460;
+            leftCard.Padding = new Padding(16, 8, 16, 12);
+            Panel capForms = SectionCap("ФОРМЫ ПРОЕКТА");
+            Label lblSrc = new Label();
+            lblSrc.Text = "Исходная форма:";
+            lblSrc.ForeColor = TextMain;
+            lblSrc.Dock = DockStyle.Top;
+            lblSrc.Height = 26;
+            lblSrc.TextAlign = ContentAlignment.MiddleLeft;
+            _formsList = new ListBox();
+            _formsList.Dock = DockStyle.Fill;
+            _formsList.BackColor = BgInput;
+            _formsList.ForeColor = TextMain;
+            _formsList.BorderStyle = BorderStyle.FixedSingle;
+            _formsList.Font = new Font("Segoe UI", 9.5F);
+            _formsList.ItemHeight = 28;
+            _formsList.IntegralHeight = false;
+            _countLabel = new Label();
+            _countLabel.Dock = DockStyle.Bottom;
+            _countLabel.Height = 28;
+            _countLabel.ForeColor = TextSoft;
+            _countLabel.TextAlign = ContentAlignment.MiddleLeft;
+            leftCard.Controls.Add(_formsList);
+            leftCard.Controls.Add(_countLabel);
+            leftCard.Controls.Add(lblSrc);
+            leftCard.Controls.Add(capForms);
+
+            Panel gapMid = new Panel();
+            gapMid.Dock = DockStyle.Left;
+            gapMid.Width = 24;
+            gapMid.BackColor = BgMain;
+
+            Panel rightCard = Card();
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Padding = new Padding(16, 8, 16, 12);
+            Panel capNew = SectionCap("НОВОЕ ИМЯ ФОРМЫ");
+            Label lblName = new Label();
+            lblName.Text = "Имя копии формы:";
+            lblName.ForeColor = TextMain;
+            lblName.Dock = DockStyle.Top;
+            lblName.Height = 26;
+            lblName.TextAlign = ContentAlignment.MiddleLeft;
+            _nameText = new TextBox();
+            _nameText.Dock = DockStyle.Top;
+            _nameText.Height = 32;
+            _nameText.BackColor = BgInput;
+            _nameText.ForeColor = TextMain;
+            _nameText.BorderStyle = BorderStyle.FixedSingle;
+            _nameText.Font = new Font("Segoe UI", 9.5F);
+            _nameText.Text = "MyForm";
+            _nameText.TextChanged += delegate { UpdateHint(); };
+            _hintLabel = new Label();
+            _hintLabel.Dock = DockStyle.Top;
+            _hintLabel.Height = 26;
+            _hintLabel.ForeColor = TextSoft;
+            _hintLabel.TextAlign = ContentAlignment.MiddleLeft;
+            _btnDuplicate = new Button();
+            _btnDuplicate.Text = "Дублировать форму";
+            _btnDuplicate.Dock = DockStyle.Bottom;
+            _btnDuplicate.Height = 42;
+            StyleButton(_btnDuplicate, true);
+            _btnDuplicate.Click += delegate { DuplicateForm(); };
+            rightCard.Controls.Add(_btnDuplicate);
+            rightCard.Controls.Add(_hintLabel);
+            rightCard.Controls.Add(_nameText);
+            rightCard.Controls.Add(lblName);
+            rightCard.Controls.Add(capNew);
+
+            mid.Controls.Add(rightCard);
+            mid.Controls.Add(gapMid);
+            mid.Controls.Add(leftCard);
+
+            Panel cardLog = Card();
+            cardLog.Dock = DockStyle.Fill;
+            cardLog.Padding = new Padding(16, 8, 8, 12);
+            Panel capLog = SectionCap("ЖУРНАЛ ДЕЙСТВИЙ");
+            _log = new RichTextBox();
+            _log.Dock = DockStyle.Fill;
+            _log.BackColor = BgInput;
+            _log.ForeColor = TextMain;
+            _log.BorderStyle = BorderStyle.None;
+            _log.ReadOnly = true;
+            _log.HideSelection = false;
+            _log.ScrollBars = RichTextBoxScrollBars.None;
+            _log.Font = new Font("Consolas", 9.5F);
+            _logBar = new Panel();
+            _logBar.Dock = DockStyle.Right;
+            _logBar.Width = 12;
+            _logBar.BackColor = BgInput;
+            _logBar.Paint += LogBarPaint;
+            _logBar.MouseDown += LogBarDown;
+            _logBar.MouseMove += LogBarMove;
+            _logBar.MouseUp += LogBarUp;
+            _log.TextChanged += delegate { _logBar.Invalidate(); };
+            _logHook = new LogScrollHook();
+            _logHook.OnScroll = delegate { _logBar.Invalidate(); };
+            _logHook.AssignHandle(_log.Handle);
+            cardLog.Controls.Add(_log);
+            cardLog.Controls.Add(_logBar);
+            cardLog.Controls.Add(capLog);
+
+            Panel sp1 = Spacer();
+            Panel sp2 = Spacer();
+
+            content.Controls.Add(cardLog);
+            content.Controls.Add(sp2);
+            content.Controls.Add(mid);
+            content.Controls.Add(sp1);
+            content.Controls.Add(cardPath);
+
+            Controls.Add(content);
+            Controls.Add(bottom);
+            Controls.Add(accentLine);
+            Controls.Add(header);
+            BuildTitleBar();
+        }
+
+        private int LogTotalLines() { return SendMessage(_log.Handle, 0x00BA, IntPtr.Zero, 0).ToInt32(); }
+        private int LogFirstLine() { return SendMessage(_log.Handle, 0x00CE, IntPtr.Zero, 0).ToInt32(); }
+        private int LogVisibleLines()
+        {
+            int h = _log.Font.Height;
+            return h > 0 ? _log.ClientSize.Height / h : 1;
+        }
+
+        private void LogBarPaint(object sender, PaintEventArgs e)
+        {
+            int total = LogTotalLines();
+            int vis = LogVisibleLines();
+            if (total <= vis) return;
+            int barH = _logBar.ClientSize.Height;
+            int thumbH = Math.Max(24, barH * vis / total);
+            int range = barH - thumbH;
+            if (range <= 0) return;
+            int y = range * LogFirstLine() / (total - vis);
+            using (SolidBrush br = new SolidBrush(Thumb))
+                e.Graphics.FillRectangle(br, 3, y, 6, thumbH);
+        }
+
+        private void LogBarDown(object sender, MouseEventArgs e)
+        {
+            _barDrag = true;
+            _barDragStartY = e.Y;
+            _barDragStartFirst = LogFirstLine();
+        }
+
+        private void LogBarMove(object sender, MouseEventArgs e)
+        {
+            if (!_barDrag) return;
+            int total = LogTotalLines();
+            int vis = LogVisibleLines();
+            if (total <= vis) return;
+            int barH = _logBar.ClientSize.Height;
+            int thumbH = Math.Max(24, barH * vis / total);
+            int range = barH - thumbH;
+            if (range <= 0) return;
+            int target = _barDragStartFirst + (e.Y - _barDragStartY) * (total - vis) / range;
+            if (target < 0) target = 0;
+            if (target > total - vis) target = total - vis;
+            int cur = LogFirstLine();
+            if (target != cur)
+            {
+                SendMessage(_log.Handle, 0x00B6, IntPtr.Zero, target - cur);
+                _logBar.Invalidate();
+            }
+        }
+
+        private void LogBarUp(object sender, MouseEventArgs e) { _barDrag = false; }
+
+        private void BuildTitleBar()
+        {
+            Panel titleBar = new Panel();
+            titleBar.Dock = DockStyle.Top;
+            titleBar.Height = 40;
+            titleBar.BackColor = BgTitle;
+            titleBar.MouseDown += TitleMouseDown;
+            titleBar.MouseDoubleClick += delegate { ToggleMax(); };
+            Panel logo = new Panel();
+            logo.Size = new Size(22, 22);
+            logo.Location = new Point(12, 9);
+            logo.Paint += delegate(object s, PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (SolidBrush br = new SolidBrush(Accent))
+                {
+                    e.Graphics.FillRectangle(br, 0, 0, 10, 10);
+                    e.Graphics.FillRectangle(br, 12, 0, 10, 10);
+                    e.Graphics.FillRectangle(br, 0, 12, 10, 10);
+                    e.Graphics.FillRectangle(br, 12, 12, 10, 10);
+                }
+            };
+            Label titleLabel = new Label();
+            titleLabel.Text = "Панель управления формами";
+            titleLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            titleLabel.ForeColor = TextMain;
+            titleLabel.AutoSize = false;
+            titleLabel.Bounds = new Rectangle(42, 0, 500, 40);
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.MouseDown += TitleMouseDown;
+            titleLabel.MouseDoubleClick += delegate { ToggleMax(); };
+            Button btnClose = TitleButton("\u2715", true);
+            Button btnMax = TitleButton("\u25A1", false);
+            Button btnMin = TitleButton("\u2013", false);
+            btnClose.Click += delegate { Close(); };
+            btnMax.Click += delegate { ToggleMax(); };
+            btnMin.Click += delegate { WindowState = FormWindowState.Minimized; };
+            titleBar.Controls.Add(titleLabel);
+            titleBar.Controls.Add(logo);
+            titleBar.Controls.Add(btnMin);
+            titleBar.Controls.Add(btnMax);
+            titleBar.Controls.Add(btnClose);
+            Controls.Add(titleBar);
+        }
+
+        private void ToggleMax()
+        {
+            WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized;
+        }
+
+        private Button TitleButton(string glyph, bool close)
+        {
+            Button b = new Button();
+            b.Text = glyph;
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderSize = 0;
+            b.Dock = DockStyle.Right;
+            b.Width = 46;
+            b.Height = 40;
+            b.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            b.Cursor = Cursors.Hand;
+            b.TabStop = false;
+            if (close)
+            {
+                b.BackColor = Color.FromArgb(232, 17, 35);
+                b.ForeColor = Color.White;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(255, 60, 70);
+            }
+            else
+            {
+                b.BackColor = BgTitle;
+                b.ForeColor = TextMain;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(58, 58, 58);
+            }
+            return b;
+        }
+
+        private Panel Spacer()
+        {
+            Panel p = new Panel();
+            p.Dock = DockStyle.Top;
+            p.Height = 16;
+            p.BackColor = BgMain;
+            return p;
+        }
+
+        private Panel Card()
+        {
+            Panel p = new Panel();
+            p.BackColor = BgCard;
+            p.Paint += delegate(object s, PaintEventArgs e)
+            {
+                using (Pen pen = new Pen(Border))
+                    e.Graphics.DrawRectangle(pen, 0, 0, p.Width - 1, p.Height - 1);
+            };
+            return p;
+        }
+
+        private Panel SectionCap(string text)
+        {
+            Panel p = new Panel();
+            p.Dock = DockStyle.Top;
+            p.Height = 28;
+            Panel bar = new Panel();
+            bar.Dock = DockStyle.Left;
+            bar.Width = 4;
+            bar.BackColor = Accent;
+            Label l = new Label();
+            l.Dock = DockStyle.Fill;
+            l.Text = text;
+            l.ForeColor = Accent;
+            l.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            l.TextAlign = ContentAlignment.MiddleLeft;
+            l.Padding = new Padding(8, 0, 0, 0);
+            p.Controls.Add(l);
+            p.Controls.Add(bar);
+            return p;
+        }
+
+        private static void StyleButton(Button b, bool primary)
+        {
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderSize = 1;
+            b.Cursor = Cursors.Hand;
+            b.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            b.TextAlign = ContentAlignment.MiddleCenter;
+            if (primary)
+            {
+                b.BackColor = Primary;
+                b.ForeColor = Color.White;
+                b.FlatAppearance.BorderColor = Primary;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(76, 127, 188);
+            }
+            else
+            {
+                b.BackColor = Color.FromArgb(45, 45, 48);
+                b.ForeColor = TextMain;
+                b.FlatAppearance.BorderColor = Border;
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(58, 58, 62);
+            }
+        }
+    }
+}
 
 
 ------------------------------------------------
@@ -1047,6 +1816,6 @@ namespace SafeWinForms
 }
 
 ==================== SUMMARY ====================
-  Source files : 8
+  Source files : 10
   Report file  : tool-for-exam_report.txt
 ================================================================
