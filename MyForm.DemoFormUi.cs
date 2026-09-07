@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace Ekzamen
 {
-    public partial class DemoForm
+    public partial class MyForm
     {
         private static readonly Color BgCard = Color.FromArgb(37, 37, 38);
         private static readonly Color BgInput = Color.FromArgb(24, 24, 24);
