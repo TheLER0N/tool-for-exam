@@ -199,6 +199,7 @@ private void UpdateHint()
                 }
                 foreach (string f in created) Log("Создан: " + f);
                 Log("Дублирование: " + src.Name + " → " + newName + " выполнено (" + created.Count + " файлов)");
+                RegisterInCsproj(Path.GetDirectoryName(src.Path), newName);
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("Форма успешно продублирована!");
                 sb.AppendLine();
@@ -249,7 +250,39 @@ private void UpdateHint()
             return fullPath;
         }
 
-        private void Log(string msg)
+            private void RegisterInCsproj(string folder, string newName)
+    {
+        if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return;
+        string[] projects = Directory.GetFiles(folder, "*.csproj", SearchOption.TopDirectoryOnly);
+        if (projects.Length == 0) return;
+        string projPath = projects[0];
+        string xml = File.ReadAllText(projPath);
+        if (xml.Contains("<Project Sdk=")) return;
+        if (xml.Contains("Include=\"" + newName + ".cs\"")) return;
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("    <Compile Include=\"" + newName + ".cs\">");
+        sb.AppendLine("      <SubType>Form</SubType>");
+        sb.AppendLine("    </Compile>");
+        if (File.Exists(Path.Combine(folder, newName + ".Designer.cs")))
+        {
+            sb.AppendLine("    <Compile Include=\"" + newName + ".Designer.cs\">");
+            sb.AppendLine("      <DependentUpon>" + newName + ".cs</DependentUpon>");
+            sb.AppendLine("    </Compile>");
+        }
+        if (File.Exists(Path.Combine(folder, newName + ".resx")))
+        {
+            sb.AppendLine("    <EmbeddedResource Include=\"" + newName + ".resx\">");
+            sb.AppendLine("      <DependentUpon>" + newName + ".cs</DependentUpon>");
+            sb.AppendLine("    </EmbeddedResource>");
+        }
+        int idx = xml.IndexOf("<Compile Include=\"Program.cs\"", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) idx = xml.IndexOf("</ItemGroup>", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) { Log("Не удалось вставить " + newName + " в .csproj"); return; }
+        xml = xml.Insert(idx, sb.ToString());
+        File.WriteAllText(projPath, xml, new System.Text.UTF8Encoding(false));
+        Log("Форма " + newName + " добавлена в " + Path.GetFileName(projPath) + " (VS увидит окно)");
+    }
+private void Log(string msg)
         {
             _log.SelectionStart = _log.TextLength;
             _log.SelectionLength = 0;

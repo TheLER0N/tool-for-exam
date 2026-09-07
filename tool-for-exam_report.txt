@@ -1,6 +1,6 @@
 ﻿================================================================
   PROJECT REPORT : tool-for-exam
-  GENERATED      : 07.09.2026 12:22:03
+  GENERATED      : 07.09.2026 13:05:08
   PATH           : C:\Users\290-23\Desktop\exam\tool-for-exam
 ================================================================
 
@@ -21,7 +21,8 @@ C:\Users\290-23\Desktop\exam\tool-for-exam
 |   |   +---Ekzamen.exe
 |   |   +---Ekzamen.exe.config
 |   |   \---Ekzamen.pdb
-|   \---tool-for-exam-v1.0.0-win-x64.zip
+|   +---tool-for-exam-v1.0.0-win-x64.zip
+|   \---tool-for-exam-v1.0.1-win-x64.zip
 +---release-to-github.bat
 \---SafeFormDuplicator.cs
 
@@ -115,7 +116,7 @@ pause
 
 ------------------------------------------------
 FILE: DemoForm.cs
-SIZE: 14889 bytes
+SIZE: 16881 bytes
 ------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -318,6 +319,7 @@ private void UpdateHint()
                 }
                 foreach (string f in created) Log("Создан: " + f);
                 Log("Дублирование: " + src.Name + " → " + newName + " выполнено (" + created.Count + " файлов)");
+                RegisterInCsproj(Path.GetDirectoryName(src.Path), newName);
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("Форма успешно продублирована!");
                 sb.AppendLine();
@@ -368,7 +370,39 @@ private void UpdateHint()
             return fullPath;
         }
 
-        private void Log(string msg)
+            private void RegisterInCsproj(string folder, string newName)
+    {
+        if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return;
+        string[] projects = Directory.GetFiles(folder, "*.csproj", SearchOption.TopDirectoryOnly);
+        if (projects.Length == 0) return;
+        string projPath = projects[0];
+        string xml = File.ReadAllText(projPath);
+        if (xml.Contains("<Project Sdk=")) return;
+        if (xml.Contains("Include=\"" + newName + ".cs\"")) return;
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("    <Compile Include=\"" + newName + ".cs\">");
+        sb.AppendLine("      <SubType>Form</SubType>");
+        sb.AppendLine("    </Compile>");
+        if (File.Exists(Path.Combine(folder, newName + ".Designer.cs")))
+        {
+            sb.AppendLine("    <Compile Include=\"" + newName + ".Designer.cs\">");
+            sb.AppendLine("      <DependentUpon>" + newName + ".cs</DependentUpon>");
+            sb.AppendLine("    </Compile>");
+        }
+        if (File.Exists(Path.Combine(folder, newName + ".resx")))
+        {
+            sb.AppendLine("    <EmbeddedResource Include=\"" + newName + ".resx\">");
+            sb.AppendLine("      <DependentUpon>" + newName + ".cs</DependentUpon>");
+            sb.AppendLine("    </EmbeddedResource>");
+        }
+        int idx = xml.IndexOf("<Compile Include=\"Program.cs\"", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) idx = xml.IndexOf("</ItemGroup>", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) { Log("Не удалось вставить " + newName + " в .csproj"); return; }
+        xml = xml.Insert(idx, sb.ToString());
+        File.WriteAllText(projPath, xml, new System.Text.UTF8Encoding(false));
+        Log("Форма " + newName + " добавлена в " + Path.GetFileName(projPath) + " (VS увидит окно)");
+    }
+private void Log(string msg)
         {
             _log.SelectionStart = _log.TextLength;
             _log.SelectionLength = 0;
@@ -415,7 +449,7 @@ private void UpdateHint()
 
 ------------------------------------------------
 FILE: DemoFormUi.cs
-SIZE: 18357 bytes
+SIZE: 18564 bytes
 ------------------------------------------------
 using System;
 using System.Drawing;
@@ -429,7 +463,6 @@ namespace Ekzamen
         private static readonly Color BgCard = Color.FromArgb(37, 37, 38);
         private static readonly Color BgInput = Color.FromArgb(24, 24, 24);
         private static readonly Color Thumb = Color.FromArgb(100, 100, 108);
-
         private Panel _logBar;
         private bool _barDrag;
         private int _barDragStartY;
@@ -453,8 +486,8 @@ namespace Ekzamen
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1000, 780);
-            MinimumSize = new Size(900, 640);
+            ClientSize = new Size(1000, 700);
+            MinimumSize = new Size(900, 620);
             MaximizedBounds = Screen.PrimaryScreen.WorkingArea;
             BackColor = BgMain;
             ForeColor = TextMain;
@@ -478,16 +511,16 @@ namespace Ekzamen
             sub.AutoSize = false;
             sub.Bounds = new Rectangle(28, 56, 700, 20);
             Label ver = new Label();
-            ver.Text = "v1.0";
+            ver.Text = "v1.1";
             ver.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             ver.ForeColor = Accent;
-            ver.AutoSize = false;
-            ver.Bounds = new Rectangle(900, 52, 72, 24);
-            ver.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            ver.Dock = DockStyle.Right;
+            ver.Width = 90;
             ver.TextAlign = ContentAlignment.MiddleRight;
+            ver.Padding = new Padding(0, 0, 24, 0);
+            header.Controls.Add(ver);
             header.Controls.Add(title);
             header.Controls.Add(sub);
-            header.Controls.Add(ver);
 
             Panel accentLine = new Panel();
             accentLine.Dock = DockStyle.Top;
@@ -502,24 +535,25 @@ namespace Ekzamen
             sign.Text = "by LERON";
             sign.ForeColor = Accent;
             sign.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
-            sign.AutoSize = false;
-            sign.Bounds = new Rectangle(16, 0, 110, 34);
+            sign.Dock = DockStyle.Left;
+            sign.Width = 110;
             sign.TextAlign = ContentAlignment.MiddleLeft;
+            sign.Padding = new Padding(16, 0, 0, 0);
             Label ready = new Label();
             ready.Text = "\u25CF Готово";
             ready.ForeColor = OkGreen;
-            ready.AutoSize = false;
-            ready.Bounds = new Rectangle(140, 0, 120, 34);
+            ready.Dock = DockStyle.Left;
+            ready.Width = 120;
             ready.TextAlign = ContentAlignment.MiddleLeft;
             _stFound = new Label();
             _stFound.ForeColor = TextSoft;
-            _stFound.AutoSize = false;
-            _stFound.Bounds = new Rectangle(800, 0, 184, 34);
-            _stFound.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _stFound.Dock = DockStyle.Right;
+            _stFound.Width = 200;
             _stFound.TextAlign = ContentAlignment.MiddleRight;
-            bottom.Controls.Add(sign);
-            bottom.Controls.Add(ready);
+            _stFound.Padding = new Padding(0, 0, 16, 0);
             bottom.Controls.Add(_stFound);
+            bottom.Controls.Add(ready);
+            bottom.Controls.Add(sign);
 
             Panel content = new Panel();
             content.Dock = DockStyle.Fill;
@@ -527,32 +561,35 @@ namespace Ekzamen
 
             Panel cardPath = Card();
             cardPath.Dock = DockStyle.Top;
-            cardPath.Height = 80;
-            cardPath.Padding = new Padding(0, 4, 0, 10);
+            cardPath.Height = 86;
+            cardPath.Padding = new Padding(12, 6, 12, 10);
             Panel capPath = SectionCap("ПУТЬ К ПРОЕКТУ");
             Panel rowPath = new Panel();
             rowPath.Dock = DockStyle.Top;
-            rowPath.Height = 34;
-            rowPath.Padding = new Padding(16, 0, 16, 0);
-            Label lblPath = new Label();
-            lblPath.Text = "Папка проекта:";
-            lblPath.ForeColor = TextMain;
-            lblPath.Dock = DockStyle.Left;
-            lblPath.Width = 110;
-            lblPath.TextAlign = ContentAlignment.MiddleLeft;
-            _btnBrowse = new Button();
-            _btnBrowse.Text = "Обзор...";
-            _btnBrowse.Dock = DockStyle.Right;
-            _btnBrowse.Width = 110;
-            StyleButton(_btnBrowse, false);
-            _btnBrowse.Click += delegate { BrowseFolder(); };
+            rowPath.Height = 40;
+            rowPath.Height = 40;int rowW = ClientSize.Width - 80;
             _folderText = new TextBox();
             _folderText.Name = "textBoxFolder";
-            _folderText.Dock = DockStyle.Fill;
+            _folderText.Location = new Point(126, 6);
+            _folderText.Size = new Size(rowW - 260, 28);
+            _folderText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             _folderText.BackColor = BgInput;
             _folderText.ForeColor = TextMain;
             _folderText.BorderStyle = BorderStyle.FixedSingle;
             _folderText.Font = new Font("Segoe UI", 9.5F);
+            _btnBrowse = new Button();
+            _btnBrowse.Text = "Обзор...";
+            _btnBrowse.Location = new Point(rowW - 126, 6);
+            _btnBrowse.Size = new Size(110, 28);
+            _btnBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            StyleButton(_btnBrowse, false);
+            _btnBrowse.Click += delegate { BrowseFolder(); };
+            Label lblPath = new Label();
+            lblPath.Text = "Папка проекта:";
+            lblPath.ForeColor = TextMain;
+            lblPath.Dock = DockStyle.Left;
+            lblPath.Width = 100;
+            lblPath.TextAlign = ContentAlignment.MiddleLeft;
             rowPath.Controls.Add(_folderText);
             rowPath.Controls.Add(_btnBrowse);
             rowPath.Controls.Add(lblPath);
@@ -561,18 +598,18 @@ namespace Ekzamen
 
             Panel mid = new Panel();
             mid.Dock = DockStyle.Top;
-            mid.Height = 244;
+            mid.Height = 240;
 
             Panel leftCard = Card();
             leftCard.Dock = DockStyle.Left;
             leftCard.Width = 460;
-            leftCard.Padding = new Padding(16, 8, 16, 12);
+            leftCard.Padding = new Padding(12, 6, 12, 10);
             Panel capForms = SectionCap("ФОРМЫ ПРОЕКТА");
             Label lblSrc = new Label();
             lblSrc.Text = "Исходная форма:";
             lblSrc.ForeColor = TextMain;
             lblSrc.Dock = DockStyle.Top;
-            lblSrc.Height = 26;
+            lblSrc.Height = 24;
             lblSrc.TextAlign = ContentAlignment.MiddleLeft;
             _formsList = new ListBox();
             _formsList.Dock = DockStyle.Fill;
@@ -580,11 +617,11 @@ namespace Ekzamen
             _formsList.ForeColor = TextMain;
             _formsList.BorderStyle = BorderStyle.FixedSingle;
             _formsList.Font = new Font("Segoe UI", 9.5F);
-            _formsList.ItemHeight = 28;
+            _formsList.ItemHeight = 26;
             _formsList.IntegralHeight = false;
             _countLabel = new Label();
             _countLabel.Dock = DockStyle.Bottom;
-            _countLabel.Height = 28;
+            _countLabel.Height = 26;
             _countLabel.ForeColor = TextSoft;
             _countLabel.TextAlign = ContentAlignment.MiddleLeft;
             leftCard.Controls.Add(_formsList);
@@ -599,17 +636,17 @@ namespace Ekzamen
 
             Panel rightCard = Card();
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Padding = new Padding(16, 8, 16, 12);
+            rightCard.Padding = new Padding(12, 6, 12, 10);
             Panel capNew = SectionCap("НОВОЕ ИМЯ ФОРМЫ");
             Label lblName = new Label();
             lblName.Text = "Имя копии формы:";
             lblName.ForeColor = TextMain;
             lblName.Dock = DockStyle.Top;
-            lblName.Height = 26;
+            lblName.Height = 24;
             lblName.TextAlign = ContentAlignment.MiddleLeft;
             _nameText = new TextBox();
             _nameText.Dock = DockStyle.Top;
-            _nameText.Height = 32;
+            _nameText.Height = 30;
             _nameText.BackColor = BgInput;
             _nameText.ForeColor = TextMain;
             _nameText.BorderStyle = BorderStyle.FixedSingle;
@@ -618,7 +655,7 @@ namespace Ekzamen
             _nameText.TextChanged += delegate { UpdateHint(); };
             _hintLabel = new Label();
             _hintLabel.Dock = DockStyle.Top;
-            _hintLabel.Height = 26;
+            _hintLabel.Height = 24;
             _hintLabel.ForeColor = TextSoft;
             _hintLabel.TextAlign = ContentAlignment.MiddleLeft;
             _btnDuplicate = new Button();
@@ -639,7 +676,7 @@ namespace Ekzamen
 
             Panel cardLog = Card();
             cardLog.Dock = DockStyle.Fill;
-            cardLog.Padding = new Padding(16, 8, 8, 12);
+            cardLog.Padding = new Padding(12, 6, 12, 10);
             Panel capLog = SectionCap("ЖУРНАЛ ДЕЙСТВИЙ");
             _log = new RichTextBox();
             _log.Dock = DockStyle.Fill;
@@ -668,7 +705,6 @@ namespace Ekzamen
 
             Panel sp1 = Spacer();
             Panel sp2 = Spacer();
-
             content.Controls.Add(cardLog);
             content.Controls.Add(sp2);
             content.Controls.Add(mid);

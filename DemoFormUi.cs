@@ -33,7 +33,7 @@ namespace Ekzamen
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1000, 760);
+            ClientSize = new Size(1000, 700);
             MinimumSize = new Size(900, 620);
             MaximizedBounds = Screen.PrimaryScreen.WorkingArea;
             BackColor = BgMain;
@@ -41,7 +41,66 @@ namespace Ekzamen
             Font = new Font("Segoe UI", 9F);
             Text = "Панель управления формами";
 
-            int w = ClientSize.Width - 48;
+            Panel header = new Panel();
+            header.Dock = DockStyle.Top;
+            header.Height = 96;
+            header.BackColor = BgMain;
+            Label title = new Label();
+            title.Text = "ПАНЕЛЬ УПРАВЛЕНИЯ ФОРМАМИ";
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = TextMain;
+            title.AutoSize = false;
+            title.Bounds = new Rectangle(28, 14, 700, 38);
+            Label sub = new Label();
+            sub.Text = "Тёмная тема  ·  дублирование форм  ·  .NET 4.8";
+            sub.Font = new Font("Segoe UI", 9.5F);
+            sub.ForeColor = TextSoft;
+            sub.AutoSize = false;
+            sub.Bounds = new Rectangle(28, 56, 700, 20);
+            Label ver = new Label();
+            ver.Text = "v1.1";
+            ver.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            ver.ForeColor = Accent;
+            ver.Dock = DockStyle.Right;
+            ver.Width = 90;
+            ver.TextAlign = ContentAlignment.MiddleRight;
+            ver.Padding = new Padding(0, 0, 24, 0);
+            header.Controls.Add(ver);
+            header.Controls.Add(title);
+            header.Controls.Add(sub);
+
+            Panel accentLine = new Panel();
+            accentLine.Dock = DockStyle.Top;
+            accentLine.Height = 2;
+            accentLine.BackColor = Accent;
+
+            Panel bottom = new Panel();
+            bottom.Dock = DockStyle.Bottom;
+            bottom.Height = 34;
+            bottom.BackColor = BgBar;
+            Label sign = new Label();
+            sign.Text = "by LERON";
+            sign.ForeColor = Accent;
+            sign.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            sign.Dock = DockStyle.Left;
+            sign.Width = 110;
+            sign.TextAlign = ContentAlignment.MiddleLeft;
+            sign.Padding = new Padding(16, 0, 0, 0);
+            Label ready = new Label();
+            ready.Text = "\u25CF Готово";
+            ready.ForeColor = OkGreen;
+            ready.Dock = DockStyle.Left;
+            ready.Width = 120;
+            ready.TextAlign = ContentAlignment.MiddleLeft;
+            _stFound = new Label();
+            _stFound.ForeColor = TextSoft;
+            _stFound.Dock = DockStyle.Right;
+            _stFound.Width = 200;
+            _stFound.TextAlign = ContentAlignment.MiddleRight;
+            _stFound.Padding = new Padding(0, 0, 16, 0);
+            bottom.Controls.Add(_stFound);
+            bottom.Controls.Add(ready);
+            bottom.Controls.Add(sign);
 
             Panel content = new Panel();
             content.Dock = DockStyle.Fill;
@@ -49,47 +108,47 @@ namespace Ekzamen
 
             Panel cardPath = Card();
             cardPath.Dock = DockStyle.Top;
-            cardPath.Height = 84;
-            cardPath.Padding = new Padding(0, 4, 0, 10);
+            cardPath.Height = 86;
+            cardPath.Padding = new Padding(12, 6, 12, 10);
             Panel capPath = SectionCap("ПУТЬ К ПРОЕКТУ");
             Panel rowPath = new Panel();
             rowPath.Dock = DockStyle.Top;
-            rowPath.Height = 36;
-            Label lblPath = new Label();
-            lblPath.Text = "Папка проекта:";
-            lblPath.ForeColor = TextMain;
-            lblPath.AutoSize = true;
-            lblPath.Location = new Point(16, 9);
+            rowPath.Height = 40;
+            rowPath.Height = 40;int rowW = ClientSize.Width - 80;
             _folderText = new TextBox();
             _folderText.Name = "textBoxFolder";
-            _folderText.Location = new Point(120, 6);
-            _folderText.Size = new Size(w - 260, 26);
-            _folderText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _folderText.Location = new Point(126, 6);
+            _folderText.Size = new Size(rowW - 260, 28);
             _folderText.BackColor = BgInput;
             _folderText.ForeColor = TextMain;
             _folderText.BorderStyle = BorderStyle.FixedSingle;
             _folderText.Font = new Font("Segoe UI", 9.5F);
             _btnBrowse = new Button();
             _btnBrowse.Text = "Обзор...";
-            _btnBrowse.Location = new Point(w - 126, 3);
-            _btnBrowse.Size = new Size(110, 30);
-            _btnBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnBrowse.Location = new Point(rowW - 126, 6);
+            _btnBrowse.Size = new Size(110, 28);
             StyleButton(_btnBrowse, false);
             _btnBrowse.Click += delegate { BrowseFolder(); };
-            rowPath.Controls.Add(lblPath);
+            Label lblPath = new Label();
+            lblPath.Text = "Папка проекта:";
+            lblPath.ForeColor = TextMain;
+            lblPath.Dock = DockStyle.Left;
+            lblPath.Width = 100;
+            lblPath.TextAlign = ContentAlignment.MiddleLeft;
             rowPath.Controls.Add(_folderText);
             rowPath.Controls.Add(_btnBrowse);
+            rowPath.Controls.Add(lblPath);
             cardPath.Controls.Add(rowPath);
             cardPath.Controls.Add(capPath);
 
             Panel mid = new Panel();
             mid.Dock = DockStyle.Top;
-            mid.Height = 210;
+            mid.Height = 240;
 
             Panel leftCard = Card();
             leftCard.Dock = DockStyle.Left;
             leftCard.Width = 460;
-            leftCard.Padding = new Padding(16, 8, 16, 12);
+            leftCard.Padding = new Padding(12, 6, 12, 10);
             Panel capForms = SectionCap("ФОРМЫ ПРОЕКТА");
             Label lblSrc = new Label();
             lblSrc.Text = "Исходная форма:";
@@ -120,10 +179,9 @@ namespace Ekzamen
             gapMid.Width = 24;
             gapMid.BackColor = BgMain;
 
-            int rightW = w - 460 - 24;
             Panel rightCard = Card();
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Padding = new Padding(16, 8, 16, 12);
+            rightCard.Padding = new Padding(12, 6, 12, 10);
             Panel capNew = SectionCap("НОВОЕ ИМЯ ФОРМЫ");
             Label lblName = new Label();
             lblName.Text = "Имя копии формы:";
@@ -133,6 +191,7 @@ namespace Ekzamen
             lblName.TextAlign = ContentAlignment.MiddleLeft;
             _nameText = new TextBox();
             _nameText.Dock = DockStyle.Top;
+            _nameText.Height = 30;
             _nameText.BackColor = BgInput;
             _nameText.ForeColor = TextMain;
             _nameText.BorderStyle = BorderStyle.FixedSingle;
@@ -146,16 +205,15 @@ namespace Ekzamen
             _hintLabel.TextAlign = ContentAlignment.MiddleLeft;
             _btnDuplicate = new Button();
             _btnDuplicate.Text = "Дублировать форму";
-            _btnDuplicate.Location = new Point(16, 118);
-            _btnDuplicate.Size = new Size(rightW - 32, 42);
-            _btnDuplicate.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _btnDuplicate.Dock = DockStyle.Bottom;
+            _btnDuplicate.Height = 42;
             StyleButton(_btnDuplicate, true);
             _btnDuplicate.Click += delegate { DuplicateForm(); };
+            rightCard.Controls.Add(_btnDuplicate);
             rightCard.Controls.Add(_hintLabel);
             rightCard.Controls.Add(_nameText);
             rightCard.Controls.Add(lblName);
             rightCard.Controls.Add(capNew);
-            rightCard.Controls.Add(_btnDuplicate);
 
             mid.Controls.Add(rightCard);
             mid.Controls.Add(gapMid);
@@ -163,16 +221,8 @@ namespace Ekzamen
 
             Panel cardLog = Card();
             cardLog.Dock = DockStyle.Fill;
-            cardLog.Padding = new Padding(16, 8, 16, 12);
+            cardLog.Padding = new Padding(12, 6, 12, 10);
             Panel capLog = SectionCap("ЖУРНАЛ ДЕЙСТВИЙ");
-            _logBar = new Panel();
-            _logBar.Dock = DockStyle.Right;
-            _logBar.Width = 12;
-            _logBar.BackColor = BgInput;
-            _logBar.Paint += LogBarPaint;
-            _logBar.MouseDown += LogBarDown;
-            _logBar.MouseMove += LogBarMove;
-            _logBar.MouseUp += LogBarUp;
             _log = new RichTextBox();
             _log.Dock = DockStyle.Fill;
             _log.BackColor = BgInput;
@@ -182,6 +232,14 @@ namespace Ekzamen
             _log.HideSelection = false;
             _log.ScrollBars = RichTextBoxScrollBars.None;
             _log.Font = new Font("Consolas", 9.5F);
+            _logBar = new Panel();
+            _logBar.Dock = DockStyle.Right;
+            _logBar.Width = 12;
+            _logBar.BackColor = BgInput;
+            _logBar.Paint += LogBarPaint;
+            _logBar.MouseDown += LogBarDown;
+            _logBar.MouseMove += LogBarMove;
+            _logBar.MouseUp += LogBarUp;
             _log.TextChanged += delegate { _logBar.Invalidate(); };
             _logHook = new LogScrollHook();
             _logHook.OnScroll = delegate { _logBar.Invalidate(); };
@@ -198,72 +256,16 @@ namespace Ekzamen
             content.Controls.Add(sp1);
             content.Controls.Add(cardPath);
 
-            Panel bottom = new Panel();
-            bottom.Dock = DockStyle.Bottom;
-            bottom.Height = 34;
-            bottom.BackColor = BgBar;
-            Label sign = new Label();
-            sign.Text = "by LERON";
-            sign.ForeColor = Accent;
-            sign.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
-            sign.Dock = DockStyle.Left;
-            sign.Width = 110;
-            sign.TextAlign = ContentAlignment.MiddleLeft;
-            sign.Padding = new Padding(16, 0, 0, 0);
-            Label ready = new Label();
-            ready.Text = "\u25CF Готово";
-            ready.ForeColor = OkGreen;
-            ready.Dock = DockStyle.Left;
-            ready.Width = 120;
-            ready.TextAlign = ContentAlignment.MiddleLeft;
-            _stFound = new Label();
-            _stFound.ForeColor = TextSoft;
-            _stFound.Dock = DockStyle.Right;
-            _stFound.Width = 200;
-            _stFound.TextAlign = ContentAlignment.MiddleRight;
-            _stFound.Padding = new Padding(0, 0, 16, 0);
-            bottom.Controls.Add(ready);
-            bottom.Controls.Add(sign);
-            bottom.Controls.Add(_stFound);
-
-            Panel header = new Panel();
-            header.Dock = DockStyle.Top;
-            header.Height = 96;
-            header.BackColor = BgMain;
-            Label title = new Label();
-            title.Text = "ПАНЕЛЬ УПРАВЛЕНИЯ ФОРМАМИ";
-            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-            title.ForeColor = TextMain;
-            title.AutoSize = false;
-            title.Bounds = new Rectangle(28, 14, 700, 38);
-            Label sub = new Label();
-            sub.Text = "Тёмная тема  ·  дублирование форм  ·  .NET 4.8";
-            sub.Font = new Font("Segoe UI", 9.5F);
-            sub.ForeColor = TextSoft;
-            sub.AutoSize = false;
-            sub.Bounds = new Rectangle(28, 56, 700, 20);
-            Label ver = new Label();
-            ver.Text = "v1.1";
-            ver.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            ver.ForeColor = Accent;
-            ver.AutoSize = false;
-            ver.Bounds = new Rectangle(ClientSize.Width - 100, 52, 72, 24);
-            ver.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            ver.TextAlign = ContentAlignment.MiddleRight;
-            header.Controls.Add(title);
-            header.Controls.Add(sub);
-            header.Controls.Add(ver);
-
-            Panel accentLine = new Panel();
-            accentLine.Dock = DockStyle.Top;
-            accentLine.Height = 2;
-            accentLine.BackColor = Accent;
-
             Controls.Add(content);
             Controls.Add(bottom);
             Controls.Add(accentLine);
             Controls.Add(header);
             BuildTitleBar();
+Load += delegate
+{
+    _folderText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+    _btnBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+};
         }
 
         private int LogTotalLines() { return SendMessage(_log.Handle, 0x00BA, IntPtr.Zero, 0).ToInt32(); }
