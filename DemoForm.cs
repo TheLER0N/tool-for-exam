@@ -283,6 +283,29 @@ dir = dir.Parent;
 }
 return null;
 }
+private void PurgeMissingEntries(string projPath, string root)
+{
+string xml = File.ReadAllText(projPath);
+string orig = xml;
+int removed = 0;
+xml = Regex.Replace(xml,
+"[ \t]*<(Compile|EmbeddedResource|None)\\s+Include=\"([^\"]+)\"\\s*(?:/>|>.*?</\\1>)(?:\r?\n)?",
+m =>
+{
+string inc = m.Groups[2].Value;
+if (inc.IndexOf('$') >= 0) return m.Value;
+string p = Path.Combine(root, inc.Replace('/', '\\'));
+if (File.Exists(p)) return m.Value;
+removed++;
+return "";
+},
+RegexOptions.Singleline);
+if (removed > 0)
+{
+File.WriteAllText(projPath, xml, new System.Text.UTF8Encoding(false));
+Log("csproj: убрано записей отсутствующих файлов: " + removed);
+}
+}
 private void RegisterInCsproj(string dest, string newName)
 {
 string root = FindProjectRoot(dest);
@@ -290,6 +313,8 @@ if (root == null) { Log("Нет .csproj выше: " + dest + " — не реги
 string projPath = Directory.GetFiles(root, "*.csproj", SearchOption.TopDirectoryOnly)[0];
 string xml = File.ReadAllText(projPath);
 if (xml.Contains("<Project Sdk=")) { Log("SDK-style .csproj: регистрация не нужна"); return; }
+PurgeMissingEntries(projPath, root);
+xml = File.ReadAllText(projPath);
 string rel = "";
 if (!string.Equals(dest, root, StringComparison.OrdinalIgnoreCase)) rel = dest.Substring(root.Length).TrimStart('\\', '/') + "\\";
 rel = rel.Replace('/', '\\');
