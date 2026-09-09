@@ -35,6 +35,10 @@ private Button _btnDuplicate;
 private Button _btnDuplicateTo;
 private RichTextBox _log;
 private Label _stFound;
+private Button _btnUndo;
+private Button _btnDelete;
+private List<string> _lastCreated = new List<string>();
+private string _csprojBak;
 [DllImport("user32.dll")]
 private static extern bool ReleaseCapture();
 [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -66,6 +70,16 @@ private void ScanForms()
 _forms.Clear();
 _formsList.Items.Clear();
 string folder = _folderText.Text.Trim();
+string regXml = "";
+bool sdk = true;
+string pr = FindProjectRoot(folder);
+if (pr != null)
+{
+string pp = Directory.GetFiles(pr, "*.csproj", SearchOption.TopDirectoryOnly)[0];
+regXml = File.ReadAllText(pp);
+sdk = regXml.Contains("<Project Sdk=");
+if (!sdk) PurgeMissingEntries(pp, pr);
+}
 if (Directory.Exists(folder))
 {
 foreach (string file in Directory.GetFiles(folder, "*.cs", SearchOption.AllDirectories))
@@ -77,7 +91,13 @@ string text;
 try { text = File.ReadAllText(file); } catch { continue; }
 Match m = Regex.Match(text, @"(?:public\s+|internal\s+|private\s+)?(?:partial\s+)?class\s+(\w+)\s*:\s*[^
 {]*\bForm\b");
-if (m.Success) _forms.Add(new FormEntry { Name = m.Groups[1].Value, Path = file, Display = Path.ChangeExtension(file.Substring(folder.Length).TrimStart('\\', '/'), null) });
+if (m.Success)
+{
+string rel = Path.ChangeExtension(file.Substring(folder.Length).TrimStart('\\', '/'), null);
+string incp = rel.Replace('/', '\\') + ".cs";
+bool reg = sdk || regXml.Length == 0 || regXml.Contains("Include=\"" + incp + "\"");
+_forms.Add(new FormEntry { Name = m.Groups[1].Value, Path = file, Display = reg ? rel : rel + " [вне проекта]" });
+}
 }
 }
 foreach (FormEntry e in _forms) _formsList.Items.Add(e.Display);
@@ -224,6 +244,9 @@ Log("Скопирован ресурс: " + destResx);
 }
 foreach (string f in created) Log("Создан: " + f);
 Log("Дублирование: " + src.Name + " → " + newName + " выполнено (" + created.Count + " файлов)");
+_lastCreated = new List<string>(created);
+string bpr = FindProjectRoot(dest);
+if (bpr != null) { string bpp = Directory.GetFiles(bpr, "*.csproj", SearchOption.TopDirectoryOnly)[0]; _csprojBak = bpp + ".bak"; File.Copy(bpp, _csprojBak, true); }
 RegisterInCsproj(dest, newName);
 var sb = new System.Text.StringBuilder();
 sb.AppendLine("Форма успешно продублирована!");
@@ -343,8 +366,39 @@ xml = xml.Insert(idx, sb.ToString());
 File.WriteAllText(projPath, xml, new System.Text.UTF8Encoding(false));
 Log("Форма " + newName + " добавлена в " + Path.GetFileName(projPath) + " (" + inc + ") — VS увидит");
 }
+private void UndoLastDuplicate()
+{
+if (_lastCreated == null || _lastCreated.Count == 0) { Log("Отмена: нет последней операции"); return; }
+int n = 0;
+foreach (string s in _lastCreated) { try { if (File.Exists(s)) { File.Delete(s); n++; } } catch { } }
+if (_csprojBak != null && File.Exists(_csprojBak)) File.Copy(_csprojBak, _csprojBak.Substring(0, _csprojBak.Length - 4), true);
+Log("Отменено дублирование: удалено файлов " + n);
+_lastCreated = new List<string>();
+ScanForms();
+}
+private void DeleteSelectedForm()
+{
+FormEntry src = SelectedEntry();
+if (src == null) { Log("Удаление: форма не выбрана"); return; }
+if (MessageBox.Show(this, "Удалить форму " + src.Name + " и её файлы (.cs, .Designer.cs, .resx)?", "Удаление", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+string dir = Path.GetDirectoryName(src.Path);
+string b = Path.GetFileNameWithoutExtension(src.Path);
+foreach (string e in new string[] { ".cs", ".Designer.cs", ".resx" }) { try { string p = Path.Combine(dir, b + e); if (File.Exists(p)) File.Delete(p); } catch { } }
+string pr = FindProjectRoot(dir);
+if (pr != null) { string pp = Directory.GetFiles(pr, "*.csproj", SearchOption.TopDirectoryOnly)[0]; if (!File.ReadAllText(pp).Contains("<Project Sdk=")) PurgeMissingEntries(pp, pr); }
+Log("Удалена форма: " + src.Name);
+ScanForms();
+}
+protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+{
+if (keyData == (Keys.Control | Keys.O)) { BrowseFolder(); return true; }
+if (keyData == (Keys.Control | Keys.Z)) { UndoLastDuplicate(); return true; }
+if (keyData == Keys.Enter && ActiveControl == _nameText) { DuplicateForm(); return true; }
+return base.ProcessCmdKey(ref msg, keyData);
+}
 private void Log(string msg)
 {
+try { File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log.txt"), DateTime.Now.ToString("HH:mm:ss") + " " + msg + Environment.NewLine); } catch { }
 _log.SelectionStart = _log.TextLength;
 _log.SelectionLength = 0;
 _log.SelectionColor = Accent;
