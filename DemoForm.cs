@@ -187,8 +187,7 @@ created.Add(DuplicatePart(extra, src.Name, newName, dest));
 }
 foreach (string f in created) Log("Создан: " + f);
 Log("Дублирование: " + src.Name + " → " + newName + " выполнено (" + created.Count + " файлов)");
-if (string.Equals(dest, folder, StringComparison.OrdinalIgnoreCase)) RegisterInCsproj(folder, newName);
-else Log("Копия создана вне папки проекта: в .csproj не регистрирую");
+RegisterInCsproj(dest, newName);
 var sb = new System.Text.StringBuilder();
 sb.AppendLine("Форма успешно продублирована!");
 sb.AppendLine();
@@ -221,7 +220,10 @@ newText = Regex.Replace(newText, @"(\bpartial\s+class\s+)" + Regex.Escape(oldNam
 newText = Regex.Replace(newText,
 @"(\b(?:public|internal|private|protected)\s+)" + Regex.Escape(oldName) + @"\s*\(",
 "$1" + newName + "(");
+newText = Regex.Replace(newText, "this\\.Name = \"" + Regex.Escape(oldName) + "\";", "this.Name = \"" + newName + "\";");
 string oldFile = Path.GetFileNameWithoutExtension(sourcePath);
+newText = Regex.Replace(newText, "this\\\\.Name = \"" + Regex.Escape(oldName) + "\";", "this.Name = \"" + newName + "\";");
+newText = Regex.Replace(newText, "this\\\\.Text = \"" + Regex.Escape(oldName) + "\";", "this.Text = \"" + newName + "\";");
 string ext = Path.GetExtension(sourcePath);
 string dir = targetDir;
 string newFile;
@@ -235,28 +237,41 @@ string fullPath = Path.Combine(dir, newFile);
 File.WriteAllText(fullPath, newText, new System.Text.UTF8Encoding(false));
 return fullPath;
 }
-private void RegisterInCsproj(string folder, string newName)
+private static string FindProjectRoot(string start)
 {
-if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return;
-string[] projects = Directory.GetFiles(folder, "*.csproj", SearchOption.TopDirectoryOnly);
-if (projects.Length == 0) return;
-string projPath = projects[0];
+DirectoryInfo dir = new DirectoryInfo(start);
+for (int i = 0; i < 8 && dir != null; i++)
+{
+if (Directory.GetFiles(dir.FullName, "*.csproj", SearchOption.TopDirectoryOnly).Length > 0) return dir.FullName;
+dir = dir.Parent;
+}
+return null;
+}
+private void RegisterInCsproj(string dest, string newName)
+{
+string root = FindProjectRoot(dest);
+if (root == null) { Log("Нет .csproj выше: " + dest + " — не регистрирую"); return; }
+string projPath = Directory.GetFiles(root, "*.csproj", SearchOption.TopDirectoryOnly)[0];
 string xml = File.ReadAllText(projPath);
-if (xml.Contains("<Project Sdk=")) return;
-if (xml.Contains("Include=\"" + newName + ".cs\"")) return;
+if (xml.Contains("<Project Sdk=")) { Log("SDK-style .csproj: регистрация не нужна"); return; }
+string rel = "";
+if (!string.Equals(dest, root, StringComparison.OrdinalIgnoreCase)) rel = dest.Substring(root.Length).TrimStart('\\', '/') + "\\";
+rel = rel.Replace('/', '\\');
+string inc = rel + newName + ".cs";
+if (xml.Contains("Include=\"" + inc + "\"")) return;
 System.Text.StringBuilder sb = new System.Text.StringBuilder();
-sb.AppendLine("    <Compile Include=\"" + newName + ".cs\">");
+sb.AppendLine("    <Compile Include=\"" + inc + "\">");
 sb.AppendLine("      <SubType>Form</SubType>");
 sb.AppendLine("    </Compile>");
-if (File.Exists(Path.Combine(folder, newName + ".Designer.cs")))
+if (File.Exists(Path.Combine(dest, newName + ".Designer.cs")))
 {
-sb.AppendLine("    <Compile Include=\"" + newName + ".Designer.cs\">");
+sb.AppendLine("    <Compile Include=\"" + rel + newName + ".Designer.cs\">");
 sb.AppendLine("      <DependentUpon>" + newName + ".cs</DependentUpon>");
 sb.AppendLine("    </Compile>");
 }
-if (File.Exists(Path.Combine(folder, newName + ".resx")))
+if (File.Exists(Path.Combine(dest, newName + ".resx")))
 {
-sb.AppendLine("    <EmbeddedResource Include=\"" + newName + ".resx\">");
+sb.AppendLine("    <EmbeddedResource Include=\"" + rel + newName + ".resx\">");
 sb.AppendLine("      <DependentUpon>" + newName + ".cs</DependentUpon>");
 sb.AppendLine("    </EmbeddedResource>");
 }
@@ -265,7 +280,7 @@ if (idx < 0) idx = xml.IndexOf("</ItemGroup>", StringComparison.OrdinalIgnoreCas
 if (idx < 0) { Log("Не удалось вставить " + newName + " в .csproj"); return; }
 xml = xml.Insert(idx, sb.ToString());
 File.WriteAllText(projPath, xml, new System.Text.UTF8Encoding(false));
-Log("Форма " + newName + " добавлена в " + Path.GetFileName(projPath) + " (VS увидит окно)");
+Log("Форма " + newName + " добавлена в " + Path.GetFileName(projPath) + " (" + inc + ") — VS увидит");
 }
 private void Log(string msg)
 {

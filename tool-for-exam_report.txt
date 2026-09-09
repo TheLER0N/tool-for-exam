@@ -1,6 +1,6 @@
 ﻿================================================================
   PROJECT REPORT : tool-for-exam
-  GENERATED      : 09.09.2026 09:41:09
+  GENERATED      : 09.09.2026 09:53:13
   PATH           : C:\Users\290-23\Desktop\Новая папка\tool-for-exam
 ================================================================
 
@@ -17,6 +17,12 @@ C:\Users\290-23\Desktop\Новая папка\tool-for-exam
 +---MyForm.DemoFormUi.cs
 +---Program.cs
 +---push-to-github.bat
++---release
+|   +---build
+|   |   +---Ekzamen.exe
+|   |   +---Ekzamen.exe.config
+|   |   \---Ekzamen.pdb
+|   \---tool-for-exam-v1.0.5-win-x64.zip
 +---release-to-github.bat
 \---SafeFormDuplicator.cs
 
@@ -437,7 +443,7 @@ if (d.ShowDialog(this) == DialogResult.OK) DuplicateForm(d.SelectedPath);
 
 ------------------------------------------------
 FILE: DemoFormUi.cs
-SIZE: 14214 bytes
+SIZE: 13983 bytes
 ------------------------------------------------
 using System;
 using System.Drawing;
@@ -547,29 +553,26 @@ Panel capPath = SectionCap("ПУТЬ К ПРОЕКТУ");
 Panel rowPath = new Panel();
 rowPath.Dock = DockStyle.Top;
 rowPath.Height = 40;
-rowPath.Height = 40;int rowW = ClientSize.Width - 80;
-_folderText = new TextBox();
-_folderText.Name = "textBoxFolder";
-_folderText.Location = new Point(126, 6);
-_folderText.Size = new Size(rowW - 260, 28);
-_folderText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-_folderText.BackColor = BgInput;
-_folderText.ForeColor = TextMain;
-_folderText.BorderStyle = BorderStyle.FixedSingle;
-_folderText.Font = new Font("Segoe UI", 9.5F);
-_btnBrowse = new Button();
-_btnBrowse.Text = "Обзор...";
-_btnBrowse.Location = new Point(rowW - 126, 6);
-_btnBrowse.Size = new Size(110, 28);
-_btnBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-StyleButton(_btnBrowse, false);
-_btnBrowse.Click += delegate { BrowseFolder(); };
+rowPath.Padding = new Padding(0, 6, 0, 6);
 Label lblPath = new Label();
 lblPath.Text = "Папка проекта:";
 lblPath.ForeColor = TextMain;
 lblPath.Dock = DockStyle.Left;
-lblPath.Width = 100;
+lblPath.Width = 110;
 lblPath.TextAlign = ContentAlignment.MiddleLeft;
+_btnBrowse = new Button();
+_btnBrowse.Text = "Обзор...";
+_btnBrowse.Dock = DockStyle.Right;
+_btnBrowse.Width = 110;
+StyleButton(_btnBrowse, false);
+_btnBrowse.Click += delegate { BrowseFolder(); };
+_folderText = new TextBox();
+_folderText.Name = "textBoxFolder";
+_folderText.Dock = DockStyle.Fill;
+_folderText.BackColor = BgInput;
+_folderText.ForeColor = TextMain;
+_folderText.BorderStyle = BorderStyle.FixedSingle;
+_folderText.Font = new Font("Segoe UI", 9.5F);
 rowPath.Controls.Add(_folderText);
 rowPath.Controls.Add(_btnBrowse);
 rowPath.Controls.Add(lblPath);
